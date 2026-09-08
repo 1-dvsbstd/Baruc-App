@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0f14">
+  <title>Baruc</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="page-shell">
+    <header class="brand">
+      <a class="brand-home" href="./" aria-label="Baruc home">
+        <div class="brand-mark">B</div>
+        <div>
+          <div class="brand-name">Baruc</div>
+          <div class="brand-subtitle">FPL mini-league competition tracker</div>
+        </div>
+      </a>
+
+      <div class="brand-actions">
+        <button id="refresh-button" class="text-button" type="button" hidden>
+          Refresh
+        </button>
+        <button id="new-tracker-button" class="text-button" type="button" hidden>
+          Create another
+        </button>
+      </div>
+    </header>
+
+    <section id="setup-view">
+      <section class="hero">
+        <span class="eyebrow">CREATE YOUR TRACKER</span>
+        <h1>Turn your FPL mini-league into a season-long competition.</h1>
+        <p>
+          Connect an existing FPL league, set the entry fee and Baruc will build
+          the recurring prize periods automatically.
+        </p>
+      </section>
+
+      <section class="panel">
+        <div class="step-heading">
+          <span class="step-number">1</span>
+          <div>
+            <h2>Find your league</h2>
+            <p>Enter the numeric ID from your FPL classic mini-league.</p>
+          </div>
+        </div>
+
+        <form id="league-form" class="input-row">
+          <input
+            id="league-id"
+            type="text"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            autocomplete="off"
+            placeholder="e.g. 35999"
+            aria-label="FPL League ID"
+            required
+          >
+          <button type="submit" id="find-button">Find league</button>
+        </form>
+
+        <div id="league-status" class="status" hidden></div>
+        <div id="league-result" hidden></div>
+      </section>
+
+      <section id="prize-panel" class="panel" hidden>
+        <div class="step-heading">
+          <span class="step-number">2</span>
+          <div>
+            <h2>Set the prize pool</h2>
+            <p>
+              Baruc maximises recurring competitions while protecting the
+              overall winner's minimum payout.
+            </p>
+          </div>
+        </div>
+
+        <label class="field-label" for="entry-fee">Entry fee per manager</label>
+
+        <div class="currency-field">
+          <span>£</span>
+          <input
+            id="entry-fee"
+            type="number"
+            min="0"
+            step="0.01"
+            value="75"
+          >
+        </div>
+
+        <div id="prize-status" class="status" hidden></div>
+        <div id="prize-result"></div>
+      </section>
+
+      <section id="create-panel" class="panel" hidden>
+        <div class="step-heading">
+          <span class="step-number">3</span>
+          <div>
+            <h2>Create tracker</h2>
+            <p>Check the league and prize pool, then save the tracker.</p>
+          </div>
+        </div>
+
+        <div id="review"></div>
+
+        <button id="create-button" class="primary-wide" type="button">
+          Create tracker
+        </button>
+
+        <div id="create-status" class="status" hidden></div>
+      </section>
+    </section>
+
+    <section id="tracker-view" hidden>
+      <div id="tracker-loading" class="tracker-loading">
+        Loading live tracker…
+      </div>
+
+      <div id="tracker-error" class="panel" hidden>
+        <h2>Tracker unavailable</h2>
+        <p id="tracker-error-message" class="muted-copy"></p>
+        <button id="tracker-error-home" type="button">Create a tracker</button>
+      </div>
+
+      <div id="tracker-content" hidden>
+        <section class="tracker-hero">
+          <div class="tracker-kicker">
+            <span id="tracker-status-badge" class="status-badge"></span>
+            <span id="tracker-key-label"></span>
+          </div>
+
+          <h1 id="tracker-league-name"></h1>
+
+          <p id="tracker-subtitle" class="tracker-intro"></p>
+
+          <div class="share-box">
+            <label for="share-url">Share this tracker</label>
+            <div class="share-row">
+              <input id="share-url" type="text" readonly>
+              <button id="copy-link-button" type="button">Copy link</button>
+            </div>
+            <span id="copy-status" class="copy-status" aria-live="polite"></span>
+          </div>
+
+          <p id="data-updated" class="data-updated"></p>
+        </section>
+
+        <section id="tracker-summary" class="summary-grid tracker-summary"></section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">CURRENT COMPETITION</span>
+              <h2 id="current-period-title">Period standings</h2>
+              <p id="current-period-meta" class="section-copy"></p>
+            </div>
+          </div>
+
+          <div id="current-period-standings"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">GAMEWEEK</span>
+              <h2 id="current-gw-title">Latest scores</h2>
+              <p id="current-gw-meta" class="section-copy"></p>
+            </div>
+          </div>
+
+          <div id="current-gw-standings"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">FPL LEAGUE</span>
+              <h2>Overall standings</h2>
+            </div>
+            <span id="tracker-manager-count" class="manager-count"></span>
+          </div>
+
+          <div id="tracker-managers" class="tracker-manager-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">PRIZES</span>
+              <h2>Prize structure</h2>
+            </div>
+          </div>
+
+          <div id="tracker-prizes"></div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="eyebrow">COMPETITIONS</span>
+              <h2>Season periods</h2>
+            </div>
+          </div>
+
+          <div id="tracker-periods" class="period-list"></div>
+
+          <p class="period-note">
+            Net FPL points are used after transfer hits. If a tie spans prize
+            positions, those prizes are combined and split equally.
+          </p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
