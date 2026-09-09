@@ -1,0 +1,20 @@
+.tracker-data-warning {
+  margin: 18px 0 0;
+  padding: 13px 14px;
+  border: 1px solid rgba(240, 207, 131, .28);
+  border-radius: 12px;
+  background: rgba(240, 207, 131, .08);
+  color: var(--warning);
+  font-size: .84rem;
+  line-height: 1.45;
+}
+
+.tracker-data-warning strong,
+.tracker-data-warning span {
+  display: block;
+}
+
+.tracker-data-warning span {
+  margin-top: 3px;
+  color: var(--soft);
+}
