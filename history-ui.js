@@ -65,9 +65,9 @@
       <div class="section-heading">
         <div>
           <span class="eyebrow">COMPLETED COMPETITIONS</span>
-          <h2>Period winners</h2>
+          <h2>Competition winners</h2>
           <p class="section-copy">
-            Final results appear here after FPL has data-checked every gameweek in the period.
+            Final results appear here only after FPL has data-checked the full competition.
           </p>
         </div>
       </div>
@@ -75,7 +75,7 @@
       <div id="tracker-period-history" class="history-period-list"></div>
 
       <div class="history-winnings-heading">
-        <span class="eyebrow">RECURRING WINNINGS</span>
+        <span class="eyebrow">TOTAL WINNINGS</span>
         <h3>Prize money won</h3>
       </div>
 
@@ -90,10 +90,10 @@
     return panel;
   }
 
-  function renderAwards(period) {
+  function renderAwards(source) {
     const awards =
-      Array.isArray(period.awards)
-        ? period.awards
+      Array.isArray(source && source.awards)
+        ? source.awards
         : [];
 
     if (!awards.length) {
@@ -109,6 +109,21 @@
     `).join('');
   }
 
+  function historyRow(title, label, source, extraClass) {
+    return `
+      <div class="history-period-row ${extraClass || ''}">
+        <div class="history-period-title">
+          <div class="period-name">${escape(title)}</div>
+          <div class="period-label">${escape(label)}</div>
+        </div>
+
+        <div class="history-awards">
+          ${renderAwards(source)}
+        </div>
+      </div>
+    `;
+  }
+
   function renderPeriodHistory(data) {
     const panel = getPanel();
 
@@ -121,13 +136,24 @@
         ? data.periodHistory
         : [];
 
+    const overallFinal =
+      data && data.overallFinal
+        ? data.overallFinal
+        : null;
+
     const winnings =
       data && data.winnings &&
       Array.isArray(data.winnings.managers)
         ? data.winnings.managers
         : [];
 
-    if (!periods.length) {
+    const overallComplete =
+      !!(
+        overallFinal &&
+        overallFinal.complete === true
+      );
+
+    if (!periods.length && !overallComplete) {
       panel.hidden = true;
       return;
     }
@@ -139,18 +165,30 @@
       document.getElementById('tracker-recurring-winnings');
 
     if (historyEl) {
-      historyEl.innerHTML = periods.map(period => `
-        <div class="history-period-row">
-          <div class="history-period-title">
-            <div class="period-name">${escape(period.name)}</div>
-            <div class="period-label">${escape(period.label)}</div>
-          </div>
+      const overallHtml =
+        overallComplete
+          ? historyRow(
+              'Season overall',
+              data && data.season && data.season.label
+                ? data.season.label
+                : 'Final standings',
+              overallFinal,
+              'history-overall-row'
+            )
+          : '';
 
-          <div class="history-awards">
-            ${renderAwards(period)}
-          </div>
-        </div>
-      `).join('');
+      const periodHtml =
+        periods.map(period =>
+          historyRow(
+            period.name,
+            period.label,
+            period,
+            ''
+          )
+        ).join('');
+
+      historyEl.innerHTML =
+        overallHtml + periodHtml;
     }
 
     if (winningsEl) {
@@ -164,7 +202,11 @@
           </div>
 
           <div class="history-winnings-value">
-            ${escape(money(row.recurringWinnings))}
+            ${escape(money(
+              row.totalWinnings !== undefined
+                ? row.totalWinnings
+                : row.recurringWinnings
+            ))}
           </div>
         </div>
       `).join('');
