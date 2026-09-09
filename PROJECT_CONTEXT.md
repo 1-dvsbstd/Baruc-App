@@ -100,3 +100,5 @@ The local files were downloaded through the GitHub connector because bundled Git
 ## Handover maintenance
 
 Record important accepted decisions, completed changes, test evidence and outstanding work here. Distinguish local changes from deployed changes. Before working from another computer, sync the source and context and check for concurrent work.
+
+GitHub write access from this ChatGPT web chat was verified on 9 September 2026.
