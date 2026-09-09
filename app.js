@@ -53,6 +53,11 @@ let activeLeague = null;
 let activePrizeConfig = null;
 let activeTrackerKey = null;
 let prizeTimer = null;
+let leagueRequestVersion = 0;
+let prizeRequestVersion = 0;
+let createRequestVersion = 0;
+let trackerRequestVersion = 0;
+let prizeCalculationPending = false;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -147,6 +152,16 @@ function clearStatus(el) {
   el.textContent = '';
 }
 
+function invalidateSetupRequests() {
+  leagueRequestVersion += 1;
+  prizeRequestVersion += 1;
+  createRequestVersion += 1;
+
+  clearTimeout(prizeTimer);
+  prizeTimer = null;
+  prizeCalculationPending = false;
+}
+
 function getLeagueKeyFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const value = String(params.get('league') || '').trim().toLowerCase();
@@ -169,6 +184,9 @@ function trackerUrl(leagueKey) {
 }
 
 function showSetupView() {
+  trackerRequestVersion += 1;
+  invalidateSetupRequests();
+
   setupView.hidden = false;
   trackerView.hidden = true;
   newTrackerButton.hidden = true;
@@ -179,6 +197,12 @@ function showSetupView() {
   activeLeague = null;
   activePrizeConfig = null;
   activeTrackerKey = null;
+
+  createButton.disabled = false;
+  createButton.textContent = 'Create tracker';
+  leagueIdInput.disabled = false;
+  entryFeeInput.disabled = false;
+  findButton.disabled = false;
 
   trackerContent.hidden = true;
   trackerError.hidden = true;
@@ -191,9 +215,6 @@ function resetSetupForNewTracker() {
 
   window.history.pushState({}, '', url);
 
-  clearTimeout(prizeTimer);
-  prizeTimer = null;
-
   leagueForm.reset();
   entryFeeInput.value = '75';
 
@@ -205,9 +226,6 @@ function resetSetupForNewTracker() {
 
   createPanel.hidden = true;
   review.innerHTML = '';
-
-  createButton.disabled = false;
-  createButton.textContent = 'Create tracker';
 
   clearStatus(leagueStatus);
   clearStatus(prizeStatus);
@@ -222,6 +240,8 @@ function resetSetupForNewTracker() {
 }
 
 function showTrackerShell() {
+  invalidateSetupRequests();
+
   setupView.hidden = true;
   trackerView.hidden = false;
   newTrackerButton.hidden = false;
@@ -311,7 +331,7 @@ function renderPrizeConfig(config) {
 }
 
 function renderReview() {
-  if (!activeLeague || !activePrizeConfig) {
+  if (!activeLeague || !activePrizeConfig || prizeCalculationPending) {
     createPanel.hidden = true;
     return;
   }
@@ -336,14 +356,21 @@ async function calculatePrizes() {
     return;
   }
 
+  const leagueId = String(activeLeague.league.id);
+  const managerCount = activeLeague.managerCount;
+  const entryFee = Number(entryFeeInput.value);
+  const requestVersion = ++prizeRequestVersion;
+
+  activePrizeConfig = null;
+  prizeCalculationPending = true;
+  createPanel.hidden = true;
+  prizeResult.innerHTML = '';
+
   clearStatus(prizeStatus);
   clearStatus(createStatus);
 
-  const entryFee = Number(entryFeeInput.value);
-
   if (!Number.isFinite(entryFee) || entryFee < 0) {
-    activePrizeConfig = null;
-    createPanel.hidden = true;
+    prizeCalculationPending = false;
 
     setStatus(
       prizeStatus,
@@ -363,9 +390,18 @@ async function calculatePrizes() {
 
     const data = await api({
       action: 'calculatePrizes',
-      managerCount: activeLeague.managerCount,
+      managerCount,
       entryFee
     });
+
+    if (
+      requestVersion !== prizeRequestVersion ||
+      !activeLeague ||
+      String(activeLeague.league.id) !== leagueId ||
+      Number(entryFeeInput.value) !== entryFee
+    ) {
+      return;
+    }
 
     if (!data.ok) {
       throw new Error(
@@ -373,11 +409,17 @@ async function calculatePrizes() {
       );
     }
 
+    prizeCalculationPending = false;
     clearStatus(prizeStatus);
     renderPrizeConfig(data);
 
   } catch (error) {
+    if (requestVersion !== prizeRequestVersion) {
+      return;
+    }
+
     activePrizeConfig = null;
+    prizeCalculationPending = false;
     prizeResult.innerHTML = '';
     createPanel.hidden = true;
 
@@ -757,6 +799,7 @@ function renderSavedTracker(data) {
 async function loadTrackerData(leagueKey) {
   showTrackerShell();
 
+  const requestVersion = ++trackerRequestVersion;
   activeTrackerKey = leagueKey;
 
   if (
@@ -778,6 +821,14 @@ async function loadTrackerData(leagueKey) {
       leagueKey
     });
 
+    if (
+      requestVersion !== trackerRequestVersion ||
+      activeTrackerKey !== leagueKey ||
+      getLeagueKeyFromUrl() !== leagueKey
+    ) {
+      return;
+    }
+
     if (!data.ok) {
       throw new Error(
         data.message || 'Tracker not found.'
@@ -787,6 +838,13 @@ async function loadTrackerData(leagueKey) {
     renderSavedTracker(data);
 
   } catch (error) {
+    if (
+      requestVersion !== trackerRequestVersion ||
+      activeTrackerKey !== leagueKey
+    ) {
+      return;
+    }
+
     trackerLoading.hidden = true;
     trackerContent.hidden = true;
     trackerError.hidden = false;
@@ -794,7 +852,9 @@ async function loadTrackerData(leagueKey) {
       error.message;
 
   } finally {
-    refreshButton.disabled = false;
+    if (requestVersion === trackerRequestVersion) {
+      refreshButton.disabled = false;
+    }
   }
 }
 
@@ -807,6 +867,31 @@ async function routeApp() {
     showSetupView();
   }
 }
+
+leagueIdInput.addEventListener('input', () => {
+  leagueRequestVersion += 1;
+  prizeRequestVersion += 1;
+
+  clearTimeout(prizeTimer);
+  prizeTimer = null;
+  prizeCalculationPending = false;
+
+  activeLeague = null;
+  activePrizeConfig = null;
+
+  leagueResult.hidden = true;
+  leagueResult.innerHTML = '';
+  prizePanel.hidden = true;
+  prizeResult.innerHTML = '';
+  createPanel.hidden = true;
+  review.innerHTML = '';
+
+  findButton.disabled = false;
+
+  clearStatus(leagueStatus);
+  clearStatus(prizeStatus);
+  clearStatus(createStatus);
+});
 
 leagueForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -823,6 +908,13 @@ leagueForm.addEventListener('submit', async event => {
     return;
   }
 
+  const requestVersion = ++leagueRequestVersion;
+  prizeRequestVersion += 1;
+
+  clearTimeout(prizeTimer);
+  prizeTimer = null;
+  prizeCalculationPending = false;
+
   findButton.disabled = true;
 
   activeLeague = null;
@@ -830,7 +922,9 @@ leagueForm.addEventListener('submit', async event => {
 
   leagueResult.hidden = true;
   prizePanel.hidden = true;
+  prizeResult.innerHTML = '';
   createPanel.hidden = true;
+  review.innerHTML = '';
 
   setStatus(
     leagueStatus,
@@ -843,6 +937,13 @@ leagueForm.addEventListener('submit', async event => {
       action: 'previewLeague',
       leagueId
     });
+
+    if (
+      requestVersion !== leagueRequestVersion ||
+      leagueIdInput.value.trim() !== leagueId
+    ) {
+      return;
+    }
 
     if (!data.ok) {
       throw new Error(
@@ -865,6 +966,10 @@ leagueForm.addEventListener('submit', async event => {
     await calculatePrizes();
 
   } catch (error) {
+    if (requestVersion !== leagueRequestVersion) {
+      return;
+    }
+
     setStatus(
       leagueStatus,
       error.message,
@@ -872,31 +977,61 @@ leagueForm.addEventListener('submit', async event => {
     );
 
   } finally {
-    findButton.disabled = false;
+    if (requestVersion === leagueRequestVersion) {
+      findButton.disabled = false;
+    }
   }
 });
 
 entryFeeInput.addEventListener('input', () => {
   clearTimeout(prizeTimer);
 
+  prizeRequestVersion += 1;
+  prizeCalculationPending = true;
+  activePrizeConfig = null;
+
+  createPanel.hidden = true;
+  review.innerHTML = '';
+  prizeResult.innerHTML = '';
+
+  clearStatus(prizeStatus);
+  clearStatus(createStatus);
+
   prizeTimer = setTimeout(
-    calculatePrizes,
+    () => {
+      prizeTimer = null;
+      calculatePrizes();
+    },
     250
   );
 });
 
 createButton.addEventListener('click', async () => {
-  if (!activeLeague || !activePrizeConfig) {
+  const currentEntryFee = Number(entryFeeInput.value);
+
+  if (
+    !activeLeague ||
+    !activePrizeConfig ||
+    prizeCalculationPending ||
+    Number(activePrizeConfig.entryFee) !== currentEntryFee
+  ) {
     setStatus(
       createStatus,
-      'Find a league and configure the prize pool first.',
+      'Wait for the current prize structure before creating the tracker.',
       'error'
     );
     return;
   }
 
+  const requestVersion = ++createRequestVersion;
+  const leagueId = activeLeague.league.id;
+  const entryFee = activePrizeConfig.entryFee;
+
   createButton.disabled = true;
   createButton.textContent = 'Creating tracker…';
+  leagueIdInput.disabled = true;
+  entryFeeInput.disabled = true;
+  findButton.disabled = true;
 
   setStatus(
     createStatus,
@@ -907,9 +1042,13 @@ createButton.addEventListener('click', async () => {
   try {
     const data = await api({
       action: 'createLeague',
-      leagueId: activeLeague.league.id,
-      entryFee: activePrizeConfig.entryFee
+      leagueId,
+      entryFee
     });
+
+    if (requestVersion !== createRequestVersion) {
+      return;
+    }
 
     if (!data.ok) {
       throw new Error(
@@ -938,6 +1077,10 @@ createButton.addEventListener('click', async () => {
     });
 
   } catch (error) {
+    if (requestVersion !== createRequestVersion) {
+      return;
+    }
+
     setStatus(
       createStatus,
       error.message,
@@ -946,6 +1089,9 @@ createButton.addEventListener('click', async () => {
 
     createButton.disabled = false;
     createButton.textContent = 'Create tracker';
+    leagueIdInput.disabled = false;
+    entryFeeInput.disabled = false;
+    findButton.disabled = false;
   }
 });
 
