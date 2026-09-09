@@ -630,10 +630,6 @@ input:focus {
   .share-row button {
     width: 100%;
   }
-
-  .manager-points {
-    display: none;
-  }
 }
 
 @media (max-width: 390px) {
