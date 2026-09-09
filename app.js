@@ -121,7 +121,7 @@ function formatDateTime(value) {
 }
 
 async function api(params) {
-  const url = new URL(BARUC_API_URL);
+  const url = new URL(BARUC_API_URL, window.location.href);
 
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== '') {
@@ -139,6 +139,27 @@ async function api(params) {
   }
 
   return response.json();
+}
+
+async function apiPost(params) {
+  const response = await fetch(BARUC_API_URL, {
+    method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+    body: JSON.stringify(params), redirect: 'follow'
+  });
+  if (!response.ok) throw new Error(`Request failed (${response.status})`);
+  return response.json();
+}
+
+async function previewLeagueWithParticipants(leagueId) {
+  const data = await api({ action: 'previewParticipants', leagueId });
+  // The current Apps Script batch is intentionally not deployed yet.
+  if (data.code === 'UNKNOWN_ACTION') return api({ action: 'previewLeague', leagueId });
+  return data;
+}
+
+function participantLabel(manager) {
+  if (manager.moneyEligible === undefined) return '';
+  return `<span class="participant-label">${manager.moneyEligible ? 'Money entrant' : 'Standings only'}${manager.startMode === 'zero' ? ` · Starts GW${Number(manager.startGw)}` : ''}</span>`;
 }
 
 function setStatus(el, message, type) {
@@ -184,6 +205,8 @@ function trackerUrl(leagueKey) {
 }
 
 function showSetupView() {
+  SetupUI.reset();
+  ParticipantUI.reset();
   trackerRequestVersion += 1;
   invalidateSetupRequests();
 
@@ -199,7 +222,7 @@ function showSetupView() {
   activeTrackerKey = null;
 
   createButton.disabled = false;
-  createButton.textContent = 'Create tracker';
+  createButton.textContent = 'Create and lock tracker';
   leagueIdInput.disabled = false;
   entryFeeInput.disabled = false;
   findButton.disabled = false;
@@ -263,14 +286,14 @@ function renderLeaguePreview(data) {
       <span class="manager-count">${managers.length} / ${data.maxManagers} managers</span>
     </div>
 
-    <div class="manager-list">
+    <div class="manager-list" hidden>
       ${managers.map(manager => `
         <div class="manager-row">
           <div class="rank">#${escapeHtml(manager.leagueRank)}</div>
 
           <div>
             <div class="team-name">${escapeHtml(manager.teamName)}</div>
-            <div class="manager-name">${escapeHtml(manager.managerName)}</div>
+            <div class="manager-name">${escapeHtml(manager.managerName)}</div>${participantLabel(manager)}
           </div>
 
           <div class="manager-points">${escapeHtml(manager.overallPoints)} pts</div>
@@ -280,16 +303,18 @@ function renderLeaguePreview(data) {
   `;
 
   leagueResult.hidden = false;
+  ParticipantUI.renderSetup(data);
+  SetupUI.onLeague(data);
 }
 
 function renderPrizeConfig(config) {
   activePrizeConfig = config;
 
   const overallPayouts =
-    config.overall.payouts.map(money).join(' / ');
+    config.overall.payouts.map(money).join(' / ') || 'No cash prizes';
 
   const periodPayouts =
-    config.recurring.payoutsPerPeriod.map(money).join(' / ');
+    config.recurring.payoutsPerPeriod.map(money).join(' / ') || 'No monthly cash prizes';
 
   prizeResult.innerHTML = `
     <div class="summary-grid">
@@ -311,7 +336,7 @@ function renderPrizeConfig(config) {
       </div>
 
       <div class="prize-line">
-        <span>Each period</span>
+        <span>Each remaining period</span>
         <strong>${periodPayouts}</strong>
       </div>
 
@@ -327,11 +352,12 @@ function renderPrizeConfig(config) {
     </p>
   `;
 
+  SetupUI.decoratePreview(config);
   renderReview();
 }
 
 function renderReview() {
-  if (!activeLeague || !activePrizeConfig || prizeCalculationPending) {
+  if (!activeLeague || !activePrizeConfig || prizeCalculationPending || SetupUI.stage() !== 4) {
     createPanel.hidden = true;
     return;
   }
@@ -341,13 +367,14 @@ function renderReview() {
       <div class="review-title">${escapeHtml(activeLeague.league.name)}</div>
 
       <div class="review-meta">
-        ${activeLeague.managerCount} managers ·
+        ${activeLeague.managerCount} participants · ${activePrizeConfig.moneyManagerCount ?? activeLeague.managerCount} money entrants ·
         ${money(activePrizeConfig.entryFee)} each ·
         ${money(activePrizeConfig.totalPool)} total pool
       </div>
     </div>
   `;
 
+  review.insertAdjacentHTML('beforeend', SetupUI.reviewDetails());
   createPanel.hidden = false;
 }
 
@@ -358,7 +385,8 @@ async function calculatePrizes() {
 
   const leagueId = String(activeLeague.league.id);
   const managerCount = activeLeague.managerCount;
-  const entryFee = Number(entryFeeInput.value);
+  const moneyManagerCount = ParticipantUI.moneyCount();
+  const entryFee = SetupUI.fee();
   const requestVersion = ++prizeRequestVersion;
 
   activePrizeConfig = null;
@@ -369,12 +397,12 @@ async function calculatePrizes() {
   clearStatus(prizeStatus);
   clearStatus(createStatus);
 
-  if (!Number.isFinite(entryFee) || entryFee < 0) {
+  if (!Number.isFinite(entryFee) || entryFee < 0 || !ParticipantUI.valid()) {
     prizeCalculationPending = false;
 
     setStatus(
       prizeStatus,
-      'Enter a valid entry fee.',
+      'Enter a valid entry fee and start gameweek (1–38).',
       'error'
     );
 
@@ -388,8 +416,11 @@ async function calculatePrizes() {
       'loading'
     );
 
-    const data = await api({
-      action: 'calculatePrizes',
+    if (!SetupUI.supported()) throw new Error('The guided setup needs the planned backend update before you can create a tracker.');
+    const data = await apiPost({
+      action: 'previewSetup',
+      setupRules: SetupUI.options(),
+      moneyManagerCount,
       managerCount,
       entryFee
     });
@@ -398,7 +429,7 @@ async function calculatePrizes() {
       requestVersion !== prizeRequestVersion ||
       !activeLeague ||
       String(activeLeague.league.id) !== leagueId ||
-      Number(entryFeeInput.value) !== entryFee
+      SetupUI.fee() !== entryFee
     ) {
       return;
     }
@@ -536,7 +567,7 @@ function renderPeriodStandings(data) {
           ? (
               period.isComplete
                 ? money(row.prize)
-                : `${money(row.prize)} projected`
+                : `${money(row.prize)} projected · cash #${row.prizePlace || row.place}`
             )
           : '';
 
@@ -548,7 +579,7 @@ function renderPeriodStandings(data) {
 
           <div>
             <div class="team-name">${escapeHtml(row.teamName)}</div>
-            <div class="manager-name">${escapeHtml(row.managerName)}</div>
+            <div class="manager-name">${escapeHtml(row.managerName)}</div>${participantLabel(row)}
           </div>
 
           <div class="score-value">
@@ -657,7 +688,7 @@ function renderOverallStandings(data) {
 
         <div>
           <div class="team-name">${escapeHtml(manager.teamName)}</div>
-          <div class="manager-name">${escapeHtml(manager.managerName)}</div>
+          <div class="manager-name">${escapeHtml(manager.managerName)}</div>${participantLabel(manager)}
         </div>
 
         <div class="manager-points">
@@ -746,7 +777,7 @@ function renderSavedTracker(data) {
 
   trackerPrizes.innerHTML = `
     <div class="prize-line">
-      <span>Entry per manager</span>
+      <span>Entry per money entrant</span>
       <strong>${money(prizes.entryFee)}</strong>
     </div>
 
@@ -766,12 +797,12 @@ function renderSavedTracker(data) {
     </div>
 
     <div class="prize-line">
-      <span>Each period</span>
+      <span>Each remaining period</span>
       <strong>${money(recurring.potPerPeriod)}</strong>
     </div>
 
     <div class="prize-line">
-      <span>Period payouts</span>
+      <span>Remaining period payouts</span>
       <strong>${recurringPayouts || '—'}</strong>
     </div>
   `;
@@ -807,6 +838,9 @@ function renderSavedTracker(data) {
   trackerLoading.hidden = true;
   trackerError.hidden = true;
   trackerContent.hidden = false;
+  document.getElementById('organiser-save-reminder')?.remove();
+  ParticipantUI.renderTracker(data);
+  SetupUI.renderTracker(data);
 }
 
 async function loadTrackerData(leagueKey) {
@@ -882,6 +916,8 @@ async function routeApp() {
 }
 
 leagueIdInput.addEventListener('input', () => {
+  SetupUI.reset();
+  ParticipantUI.reset();
   leagueRequestVersion += 1;
   prizeRequestVersion += 1;
 
@@ -946,10 +982,7 @@ leagueForm.addEventListener('submit', async event => {
   );
 
   try {
-    const data = await api({
-      action: 'previewLeague',
-      leagueId
-    });
+    const data = await previewLeagueWithParticipants(leagueId);
 
     if (
       requestVersion !== leagueRequestVersion ||
@@ -973,8 +1006,6 @@ leagueForm.addEventListener('submit', async event => {
     );
 
     renderLeaguePreview(data);
-
-    prizePanel.hidden = false;
 
     await calculatePrizes();
 
@@ -1020,7 +1051,11 @@ entryFeeInput.addEventListener('input', () => {
 });
 
 createButton.addEventListener('click', async () => {
-  const currentEntryFee = Number(entryFeeInput.value);
+  const currentEntryFee = SetupUI.fee();
+  if (!document.getElementById('lock-confirm').checked) {
+    setStatus(createStatus, 'Check the review and tick the confirmation before locking your tracker.', 'error');
+    return;
+  }
 
   if (
     !activeLeague ||
@@ -1039,6 +1074,10 @@ createButton.addEventListener('click', async () => {
   const requestVersion = ++createRequestVersion;
   const leagueId = activeLeague.league.id;
   const entryFee = activePrizeConfig.entryFee;
+  const participants = ParticipantUI.choices();
+  const setupRules = activePrizeConfig.setupRules;
+  SetupUI.setBusy(true);
+  ParticipantUI.setBusy(true);
 
   createButton.disabled = true;
   createButton.textContent = 'Creating tracker…';
@@ -1053,11 +1092,9 @@ createButton.addEventListener('click', async () => {
   );
 
   try {
-    const data = await api({
-      action: 'createLeague',
-      leagueId,
-      entryFee
-    });
+    const data = participants
+      ? await apiPost({ action: 'createLeague', leagueId, entryFee, participants, setupRules })
+      : await api({ action: 'createLeague', leagueId, entryFee });
 
     if (requestVersion !== createRequestVersion) {
       return;
@@ -1069,6 +1106,7 @@ createButton.addEventListener('click', async () => {
       );
     }
 
+    ParticipantUI.rememberAccess(data);
     const url = new URL(window.location.href);
     url.search = '';
     url.hash = '';
@@ -1100,8 +1138,10 @@ createButton.addEventListener('click', async () => {
       'error'
     );
 
+    SetupUI.setBusy(false);
+    ParticipantUI.setBusy(false);
     createButton.disabled = false;
-    createButton.textContent = 'Create tracker';
+    createButton.textContent = 'Create and lock tracker';
     leagueIdInput.disabled = false;
     entryFeeInput.disabled = false;
     findButton.disabled = false;

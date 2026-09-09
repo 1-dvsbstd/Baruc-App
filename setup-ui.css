@@ -1,0 +1,31 @@
+[hidden] { display: none !important; }
+.hero { padding-bottom: 18px; }
+.hero h1 { max-width: 760px; }
+.league-guide { margin-top: 16px; color: var(--muted, #a3adbc); }
+summary { cursor: pointer; padding: 12px 0; }
+.league-guide li { margin: 10px 0; line-height: 1.6; }
+.choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
+.choice-grid.two { grid-template-columns: repeat(2, 1fr); }
+.choice-grid button { text-align: left; background: #151e29; border: 1px solid #344252; color: #eef4fa; min-height: 94px; padding: 16px; }
+.choice-grid button span { display: block; font-size: 13px; color: #adb8c7; margin-top: 7px; font-weight: 400; line-height: 1.5; }
+button[aria-pressed="true"] { border-color: #82e6bd; box-shadow: inset 0 0 0 1px #82e6bd; background: #17382d; color: #e4fff2; }
+.fee-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.fee-buttons button { background: #151e29; color: #eef4fa; border: 1px solid #344252; }
+.fee-buttons button[aria-pressed="true"] { background: #17382d; border-color: #82e6bd; }
+.fee-buttons small { display: block; font-size: 10px; }
+.setup-tip, .forfeit-banner { padding: 16px; background: #152a27; border-left: 3px solid #82e6bd; line-height: 1.6; border-radius: 6px; }
+.setup-actions { display: flex; justify-content: space-between; gap: 14px; margin-top: 24px; }
+#playing-panel details { border-top: 1px solid #2b3542; margin: 14px 0; }
+#playing-panel input:not([type="checkbox"]), #prize-panel select, #custom-prizes input:not([type="range"]) { width: 100%; box-sizing: border-box; background: #0c121b; color: #edf3f9; border: 1px solid #344252; border-radius: 8px; padding: 12px; font: inherit; }
+#custom-prizes label { display: block; margin: 16px 0 8px; }
+#monthly-percent { width: 100%; }
+.lock-confirm { display: flex; align-items: flex-start; gap: 12px; margin: 24px 0; line-height: 1.5; }
+.lock-confirm input { width: 20px; height: 20px; flex-shrink: 0; }
+.setup-warning { padding: 14px; color: #ffe2a2; background: #332a17; border-radius: 8px; line-height: 1.5; }
+.ratio-bars { display: flex; gap: 4px; height: 8px; margin: 10px 0; }
+.ratio-bars span { background: #82e6bd; border-radius: 3px; }
+.ratio-bars span:nth-child(even) { background: #639fb8; }
+#participant-setup .participant-entry { margin-top: 12px; }
+.setup-review-detail { line-height: 1.7; overflow-wrap: anywhere; }
+.forfeit-banner { margin: 16px 0; overflow-wrap: anywhere; }
+@media(max-width: 560px) { .choice-grid { grid-template-columns: 1fr; }.choice-grid button { min-height: 70px; }.setup-actions { flex-direction: column; }.choice-grid.two { grid-template-columns: 1fr 1fr; } }

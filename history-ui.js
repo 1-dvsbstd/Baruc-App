@@ -65,7 +65,7 @@
       <div class="section-heading">
         <div>
           <span class="eyebrow">COMPLETED COMPETITIONS</span>
-          <h2>Competition winners</h2>
+          <h2>Competition prizes</h2>
           <p class="section-copy">
             Final results appear here only after FPL has data-checked the full competition.
           </p>
@@ -102,7 +102,7 @@
 
     return awards.map(award => `
       <div class="history-award">
-        <span class="history-award-place">${escape(placeLabel(award.place))}</span>
+        <span class="history-award-place">${escape(placeLabel(award.prizePlace || award.place))}</span>
         <span class="history-award-name">${escape(award.managerName || award.teamName)}</span>
         <strong>${escape(money(award.prize))}</strong>
       </div>

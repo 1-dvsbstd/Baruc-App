@@ -6,6 +6,8 @@
   <meta name="theme-color" content="#0b0f14">
   <title>Baruc</title>
   <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="participant-ui.css">
+  <link rel="stylesheet" href="setup-ui.css">
   <link rel="stylesheet" href="coverage-ui.css">
   <link rel="stylesheet" href="history-ui.css">
 </head>
@@ -33,10 +35,9 @@
     <section id="setup-view">
       <section class="hero">
         <span class="eyebrow">CREATE YOUR TRACKER</span>
-        <h1>Turn your FPL mini-league into a season-long competition.</h1>
+        <h1>Your league. Your rules.</h1>
         <p>
-          Connect an existing FPL league, set the entry fee and Baruc will build
-          the recurring prize periods automatically.
+          A little competition. A season of bragging rights. Start by finding your FPL league.
         </p>
       </section>
 
@@ -62,24 +63,52 @@
           >
           <button type="submit" id="find-button">Find league</button>
         </form>
+        <details class="league-guide"><summary>Not sure how?</summary>
+          <ol><li>Open FPL and go to Leagues &amp; Cups.</li><li>Open your classic mini-league standings in a browser.</li>
+          <li>Copy the number after <strong>/leagues/</strong> in the address. For example, /leagues/<strong>35999</strong>/standings means your ID is <strong>35999</strong>.</li></ol>
+          <p>Use the league ID, rather than the invitation code. If the FPL app hides the address, open FPL in your browser.</p>
+        </details>
 
         <div id="league-status" class="status" hidden></div>
         <div id="league-result" hidden></div>
       </section>
 
+      <section id="playing-panel" class="panel" hidden>
+        <div class="step-heading"><span class="step-number">2</span><div><h2>What are you playing for?</h2><p>Everyone takes part in the standings.</p></div></div>
+        <div class="choice-grid" role="group" aria-label="Playing mode">
+          <button type="button" data-mode="money" aria-pressed="true"><strong>Money</strong><span>Everyone chips in</span></button>
+          <button type="button" data-mode="fun" aria-pressed="false"><strong>For fun</strong><span>All the bragging rights</span></button>
+          <button type="button" data-mode="both" aria-pressed="false"><strong>Both</strong><span>Choose who plays for cash</span></button>
+        </div>
+        <p id="playing-tip" class="setup-tip"></p>
+        <details id="manager-choices"><summary>Choose money entrants &amp; scoring history</summary><div id="setup-managers"></div></details>
+        <details id="forfeit-options"><summary>Add a last-place forfeit (optional)</summary>
+          <p class="section-copy">A bit of fun for everyone in the standings. Agree it with your league first. It appears as a banner on your tracker.</p>
+          <label class="field-label" for="forfeit-overall">Overall last place</label><input id="forfeit-overall" maxlength="200" placeholder="e.g. Buy breakfast at the end-of-season meet-up">
+          <label class="field-label" for="forfeit-monthly">Monthly last place</label><input id="forfeit-monthly" maxlength="200" placeholder="e.g. Let the league choose your team name">
+          <p class="section-copy">Monthly means each Baruc four-gameweek period, plus the final two-gameweek sprint.</p>
+        </details>
+        <button id="playing-next" class="primary-wide" type="button">Continue to prizes</button>
+      </section>
+
       <section id="prize-panel" class="panel" hidden>
         <div class="step-heading">
-          <span class="step-number">2</span>
+          <span class="step-number">3</span>
           <div>
-            <h2>Set the prize pool</h2>
+            <h2>Make the prizes yours</h2>
             <p>
-              Baruc maximises recurring competitions while protecting the
-              overall winner's minimum payout.
+              Start with a suggested plan, then customise any split.
             </p>
           </div>
         </div>
 
-        <label class="field-label" for="entry-fee">Entry fee per manager</label>
+        <div id="money-options">
+        <label class="field-label" for="entry-fee">Entry fee per money entrant</label>
+        <div id="fee-buttons" class="fee-buttons" role="group" aria-label="Entry fee">
+          <button type="button" data-fee="5">£5</button><button type="button" data-fee="10">£10</button>
+          <button type="button" data-fee="25">£25</button><button type="button" data-fee="50">£50</button>
+          <button type="button" data-fee="75" aria-pressed="true">£75 <small>Baruc default</small></button><button type="button" data-fee="custom">Custom</button>
+        </div>
 
         <div class="currency-field">
           <span>£</span>
@@ -91,24 +120,43 @@
             value="75"
           >
         </div>
+        <label class="field-label" for="competition-choice">What should the prize pool reward?</label>
+        <select id="competition-choice"><option value="both">Manager of the month + manager of the year</option><option value="monthly">Manager of the month only</option><option value="overall">Manager of the year — overall places</option><option value="winner">Winner takes all</option></select>
+        <p id="competition-tip" class="setup-tip"></p>
+        <div class="choice-grid two" role="group" aria-label="Prize plan">
+          <button type="button" data-template="default" aria-pressed="true"><strong>Suggested</strong><span>Adapted to your fee and cash entrants</span></button>
+          <button type="button" data-template="custom" aria-pressed="false"><strong>Custom</strong><span>Choose places and ratios</span></button>
+        </div>
+        <div id="custom-prizes" hidden>
+          <div id="overall-controls"><label for="overall-places">Overall paid places</label><input id="overall-places" type="number" min="1" max="50" value="2">
+          <label for="overall-ratio">Overall ratio</label><input id="overall-ratio" value="3:1" inputmode="text"></div>
+          <div id="monthly-controls"><label for="monthly-places">Monthly paid places</label><input id="monthly-places" type="number" min="1" max="50" value="2">
+          <label for="monthly-ratio">Monthly ratio</label><input id="monthly-ratio" value="3:1" inputmode="text"></div>
+          <p class="section-copy">One weight per place. For example, 5:3:1 gives first place five shares, second three and third one. Ties split the occupied prizes.</p>
+          <div id="allocation-control"><label for="monthly-percent">Percentage of the pool for monthly prizes: <output id="monthly-percent-label">60%</output></label>
+          <input id="monthly-percent" type="range" min="1" max="99" value="60"></div>
+        </div></div>
 
         <div id="prize-status" class="status" hidden></div>
         <div id="prize-result"></div>
+        <div class="setup-actions"><button id="prizes-back" class="text-button" type="button">Back to playing options</button><button id="prizes-next" type="button">Review your tracker</button></div>
       </section>
 
       <section id="create-panel" class="panel" hidden>
         <div class="step-heading">
-          <span class="step-number">3</span>
+          <span class="step-number">4</span>
           <div>
-            <h2>Create tracker</h2>
-            <p>Check the league and prize pool, then save the tracker.</p>
+            <h2>One last look</h2>
+            <p>You can go back and change anything before creating. Creation locks the entry fee, prize plan and forfeits. Your shared link is view-only.</p>
           </div>
         </div>
 
         <div id="review"></div>
+        <button id="review-back" class="text-button" type="button">Back and make changes</button>
+        <label class="lock-confirm"><input id="lock-confirm" type="checkbox">I've checked the entrants, prizes and forfeits. Lock these settings.</label>
 
         <button id="create-button" class="primary-wide" type="button">
-          Create tracker
+          Create and lock tracker
         </button>
 
         <div id="create-status" class="status" hidden></div>
@@ -218,6 +266,8 @@
   </main>
 
   <script src="config.js"></script>
+  <script src="participant-ui.js"></script>
+  <script src="setup-ui.js"></script>
   <script src="app.js"></script>
   <script src="coverage-ui.js"></script>
   <script src="season-ui.js"></script>

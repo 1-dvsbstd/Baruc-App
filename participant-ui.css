@@ -1,0 +1,11 @@
+.participant-entry { margin: 18px 0; padding: 14px; border: 1px solid var(--border); border-radius: 12px; min-width: 0; }
+.participant-entry legend { font-weight: 700; max-width: 100%; overflow-wrap: anywhere; }
+.participant-entry legend span { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.participant-entry label, #participant-admin label { display: block; margin: 12px 0; font-size: .85rem; }
+.participant-entry .participant-check { display: flex; align-items: center; gap: 10px; }
+.participant-check input { width: 18px; height: 18px; flex: none; }
+.participant-entry select { width: 100%; background: var(--panel-2); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font: inherit; margin-top: 6px; }
+.participant-entry [hidden], #participant-admin [hidden] { display: none; }
+#participant-admin summary { cursor: pointer; font-weight: 700; }
+#participant-admin button { margin: 8px 6px 8px 0; }
+.participant-label { display: block; color: var(--muted); font-size: .72rem; margin-top: 3px; }

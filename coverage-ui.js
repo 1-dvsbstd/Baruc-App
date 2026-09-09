@@ -101,7 +101,7 @@
         : '';
 
     warning.innerHTML = `
-      <strong>FPL data incomplete${managerText}.</strong>
+      <strong>FPL data incomplete${escapeHtml(managerText)}.</strong>
       <span>
         The tracker is showing the data currently available. Standings and
         prize positions remain provisional until the missing scores are available.
