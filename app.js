@@ -600,14 +600,27 @@ function renderCurrentGameweek(data) {
         a.currentGameweek.netPoints
     );
 
+  let previousNetPoints = null;
+  let displayedPlace = 0;
+
   currentGwStandings.innerHTML =
     sorted.map((manager, index) => {
       const gw = manager.currentGameweek;
       const chip = formatChip(gw.activeChip);
+      const netPoints = Number(gw.netPoints);
+
+      if (
+        index === 0 ||
+        netPoints !== previousNetPoints
+      ) {
+        displayedPlace = index + 1;
+      }
+
+      previousNetPoints = netPoints;
 
       return `
         <div class="score-row">
-          <div class="score-place">${index + 1}</div>
+          <div class="score-place">${displayedPlace}</div>
 
           <div>
             <div class="team-name">
