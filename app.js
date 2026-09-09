@@ -239,7 +239,7 @@ function resetSetupForNewTracker() {
   window.history.pushState({}, '', url);
 
   leagueForm.reset();
-  entryFeeInput.value = '75';
+  entryFeeInput.value = '5';
 
   leagueResult.hidden = true;
   leagueResult.innerHTML = '';
@@ -276,82 +276,13 @@ function showTrackerShell() {
 }
 
 function renderLeaguePreview(data) {
-  const managers = data.managers || [];
-
-  leagueResult.innerHTML = `
-    <div class="league-header">
-      <div>
-        <h3>${escapeHtml(data.league.name)}</h3>
-      </div>
-      <span class="manager-count">${managers.length} / ${data.maxManagers} managers</span>
-    </div>
-
-    <div class="manager-list" hidden>
-      ${managers.map(manager => `
-        <div class="manager-row">
-          <div class="rank">#${escapeHtml(manager.leagueRank)}</div>
-
-          <div>
-            <div class="team-name">${escapeHtml(manager.teamName)}</div>
-            <div class="manager-name">${escapeHtml(manager.managerName)}</div>${participantLabel(manager)}
-          </div>
-
-          <div class="manager-points">${escapeHtml(manager.overallPoints)} pts</div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-
+  leagueResult.textContent = data.league.name + ' · ' + data.managerCount + ' entrants';
   leagueResult.hidden = false;
-  ParticipantUI.renderSetup(data);
   SetupUI.onLeague(data);
 }
 
 function renderPrizeConfig(config) {
   activePrizeConfig = config;
-
-  const overallPayouts =
-    config.overall.payouts.map(money).join(' / ') || 'No cash prizes';
-
-  const periodPayouts =
-    config.recurring.payoutsPerPeriod.map(money).join(' / ') || 'No monthly cash prizes';
-
-  prizeResult.innerHTML = `
-    <div class="summary-grid">
-      <div class="summary-card">
-        <span class="summary-label">Total pool</span>
-        <span class="summary-value">${money(config.totalPool)}</span>
-      </div>
-
-      <div class="summary-card">
-        <span class="summary-label">Recurring prizes</span>
-        <span class="summary-value">${money(config.recurring.totalPot)}</span>
-      </div>
-    </div>
-
-    <div style="margin-top:16px">
-      <div class="prize-line">
-        <span>Overall</span>
-        <strong>${overallPayouts}</strong>
-      </div>
-
-      <div class="prize-line">
-        <span>Each remaining period</span>
-        <strong>${periodPayouts}</strong>
-      </div>
-
-      <div class="prize-line">
-        <span>Period pot</span>
-        <strong>${money(config.recurring.potPerPeriod)}</strong>
-      </div>
-    </div>
-
-    <p class="period-note">
-      10 competitions: GW1–4 through GW33–36, followed by the GW37–38 Final Sprint.
-      Tied prize positions are combined and split equally.
-    </p>
-  `;
-
   SetupUI.decoratePreview(config);
   renderReview();
 }
@@ -367,7 +298,7 @@ function renderReview() {
       <div class="review-title">${escapeHtml(activeLeague.league.name)}</div>
 
       <div class="review-meta">
-        ${activeLeague.managerCount} participants · ${activePrizeConfig.moneyManagerCount ?? activeLeague.managerCount} money entrants ·
+        ${activeLeague.managerCount} entrants ·
         ${money(activePrizeConfig.entryFee)} each ·
         ${money(activePrizeConfig.totalPool)} total pool
       </div>
@@ -385,7 +316,7 @@ async function calculatePrizes() {
 
   const leagueId = String(activeLeague.league.id);
   const managerCount = activeLeague.managerCount;
-  const moneyManagerCount = ParticipantUI.moneyCount();
+  const moneyManagerCount = activeLeague.managerCount;
   const entryFee = SetupUI.fee();
   const requestVersion = ++prizeRequestVersion;
 
@@ -397,12 +328,12 @@ async function calculatePrizes() {
   clearStatus(prizeStatus);
   clearStatus(createStatus);
 
-  if (!Number.isFinite(entryFee) || entryFee < 0 || !ParticipantUI.valid()) {
+  if (!Number.isInteger(entryFee) || entryFee < 5 || entryFee > 10000 || entryFee % 5 !== 0) {
     prizeCalculationPending = false;
 
     setStatus(
       prizeStatus,
-      'Enter a valid entry fee and start gameweek (1–38).',
+      'Choose an entry fee of at least £5, in £5 increments.',
       'error'
     );
 
@@ -1074,7 +1005,7 @@ createButton.addEventListener('click', async () => {
   const requestVersion = ++createRequestVersion;
   const leagueId = activeLeague.league.id;
   const entryFee = activePrizeConfig.entryFee;
-  const participants = ParticipantUI.choices();
+  const participants = SetupUI.choices();
   const setupRules = activePrizeConfig.setupRules;
   SetupUI.setBusy(true);
   ParticipantUI.setBusy(true);

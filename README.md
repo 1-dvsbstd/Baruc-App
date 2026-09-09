@@ -1,10 +1,9 @@
 # Baruc-App
-FPL mini-league competition tracker for money, fun, or both.
 
-Open the homepage to find a classic FPL league, choose cash entrants and optional forfeits, then review a suggested or custom prize plan. Creation locks the rules; share the viewer link and keep the organiser code private.
+Paid FPL mini-league tracker. Find a league, choose an entry fee from £5 in £5 increments, then choose one overall winner or Manager of the Month plus overall. Completed setup steps collapse into editable summaries.
 
-Entry presets: £5, £10, £25, £50, £75, custom. Prizes support overall places, recurring periods, both, or winner takes all. “Monthly” means four-gameweek periods plus the final two-gameweek sprint.
+All entrants start at zero in GW1 before the season, or the next gameweek for a later creation. Manager of the Month uses four-gameweek periods plus a two-gameweek Final Sprint. Awards use £5 increments; tied winners share prizes equally.
 
-Static HTML/CSS/JavaScript; no build step. Serve this directory with a local web server for browser testing. config.js identifies the Apps Script deployment. Tracker URLs use ?league=<tracker-key>.
+Static HTML/CSS/JavaScript; no build. Serve this directory locally for testing. config.js identifies the Apps Script deployment; viewer links use ?league=<tracker-key>. Keep the private organiser code separate from viewer links.
 
-The guided setup requires backend setupRulesVersion 1 (source version 0.9.0). This backend batch is awaiting the planned Apps Script sync. Existing tracker links remain readable against the older deployment; new setup explains when the update is needed.
+New setup requires backend source 0.10.0 / setupRulesVersion 2. Apps Script sync is still pending. Existing tracker reads remain supported; new creation explains when the backend update is required.

@@ -1,7 +1,5 @@
 /* Participant setup and private organiser controls. No credentials in share URLs. */
 window.ParticipantUI = (() => {
-  let setupChoices = null;
-  let setupBusy = false;
   let adminToken = '';
   let tokenLeague = '';
   let adminVersion = 0;
@@ -46,41 +44,13 @@ window.ParticipantUI = (() => {
     review.innerHTML = '';
     prizeTimer = setTimeout(calculatePrizes, 250);
   }
-  function renderSetup(data) {
-    setupChoices = null;
-    if (!data.participantPolicyVersion) return;
-    setupChoices = data.managers.map(m => ({ managerId: m.managerId, moneyEligible: true,
-      startMode: 'backfill', startGw: Math.max(m.teamStartGw || 1, data.suggestedStartGw || 1) }));
-    const panel = document.createElement('div');
-    panel.id = 'participant-setup';
-    panel.innerHTML = `<h3>Participant rules</h3><p class="section-copy">Everyone appears in standings. Only money entrants fund the pool and can win cash prizes.</p>` +
-      data.managers.map((m, i) => choiceFields(m, setupChoices[i], false)).join('');
-    document.getElementById('setup-managers').replaceChildren(panel);
-    panel.addEventListener('input', () => {
-      updateStartVisibility(panel);
-      setupChoices = readChoices(panel, false);
-      invalidatePreview();
-    });
-    setBusy(false);
-  }
-  function choices() {
-    const panel = document.getElementById('participant-setup');
-    return setupChoices && panel ? readChoices(panel, false).map(c => ({ ...c,
-      moneyEligible: SetupUI.mode() === 'fun' ? false : SetupUI.mode() === 'money' ? true : c.moneyEligible })) : null;
-  }
-  function moneyCount() { const rows = choices(); return rows ? rows.filter(c => c.moneyEligible).length : undefined; }
-  function valid() {
-    return !setupChoices || setupChoices.every(c => c.startMode === 'backfill' ||
-      (Number.isInteger(c.startGw) && c.startGw >= 1 && c.startGw <= 38));
-  }
   function setBusy(value) {
-    setupBusy = value;
     document.querySelectorAll('#participant-setup fieldset').forEach(fieldset => { fieldset.disabled = value; });
   }
   function rememberAccess(data) {
     if (data.adminToken) { adminToken = data.adminToken; tokenLeague = data.leagueKey; }
   }
-  function reset() { setupChoices = null; setBusy(false); adminVersion += 1; }
+  function reset() { setBusy(false); adminVersion += 1; }
   function prizePreview(prizes) {
     return `<div class="review-box"><p>${prizes.moneyManagerCount} money entrants · ${esc(money(prizes.totalPool))} total pool</p>
       <p>Overall prizes: ${prizes.overall.payouts.map(money).map(esc).join(' / ') || 'No cash prizes'}</p>
@@ -134,9 +104,14 @@ window.ParticipantUI = (() => {
         if (!result.ok) throw new Error(result.message);
         if (!result.candidates.length) { status.textContent = 'No new FPL members to admit.'; return; }
         status.textContent = 'Choose the new participants and their entry rules.';
-        container.innerHTML = result.candidates.map(m => choiceFields(m, { moneyEligible: false,
-          startMode: 'backfill', startGw: Math.max(m.teamStartGw || 1, result.suggestedStartGw || 1) }, true)).join('') +
+        container.innerHTML = result.candidates.map(m => choiceFields(m, { moneyEligible: data.prizes?.setupRules?.model === 'paid',
+          startMode: data.prizes?.setupRules?.model === 'paid' ? 'zero' : 'backfill', startGw: Math.max(m.teamStartGw || 1, result.suggestedStartGw || 1) }, true)).join('') +
           '<button id="admission-preview" type="button">Review entry and prizes</button><div id="admission-review"></div>';
+        if (data.prizes?.setupRules?.model === 'paid') {
+          container.querySelectorAll('[data-field="moneyEligible"], [data-field="startMode"], [data-field="startGw"]').forEach(input => { input.disabled = true; });
+          container.querySelectorAll('fieldset details, fieldset .participant-check:not(:first-of-type)').forEach(item => { item.hidden = true; });
+          status.textContent = 'New entrants pay '+money(data.prizes.entryFee)+' and start from zero in GW'+result.suggestedStartGw+'. Past awards stay unchanged.';
+        }
         let previewVersion = 0;
         const reviewEl = container.querySelector('#admission-review');
         container.addEventListener('input', () => { updateStartVisibility(container); previewVersion += 1; reviewEl.innerHTML = ''; });
@@ -174,5 +149,5 @@ window.ParticipantUI = (() => {
       finally { button.disabled = false; }
     });
   }
-  return { renderSetup, choices, moneyCount, valid, setBusy, rememberAccess, reset, renderTracker, invalidatePreview };
+  return { setBusy, rememberAccess, reset, renderTracker, invalidatePreview };
 })();

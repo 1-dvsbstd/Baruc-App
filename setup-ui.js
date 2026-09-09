@@ -1,142 +1,89 @@
-/* Guided setup. No write occurs until the reviewed configuration is locked. */
+/* Paid setup: one open step, immutable reviewed rules, no writes until create. */
 window.SetupUI = (() => {
   const el = id => document.getElementById(id);
-  let mode = 'money', template = 'default', stage = 1, supported = false;
-  const tips = {
-    both: 'Monthly prizes give everyone a fresh chance and help keep the whole league engaged throughout the year. The overall prize rewards season-long consistency.',
-    monthly: 'A fresh chance each period helps keep everyone engaged, even if they fall behind overall.',
-    overall: 'Reward consistency across the full season, with as many winning places as your pool comfortably supports.',
-    winner: 'One champion, one prize. A simple, bigger reward — but fewer chances for managers further down the table.'
-  };
-  function changed() {
-    el('lock-confirm').checked = false;
-    if (activeLeague) ParticipantUI.invalidatePreview();
-  }
-  function showStage(value, scroll = true) {
+  let stage = 1, plan = 'overall', startGw = 1, supported = false;
+  function fee() { return Number(el('entry-fee').value); }
+  function validFee() { return Number.isInteger(fee()) && fee() >= 5 && fee() <= 10000 && fee() % 5 === 0; }
+  function periodCount() { return startGw <= 36 ? 10 - Math.floor((startGw - 1) / 4) : 1; }
+  function minimumFee() { return Math.max(5, Math.ceil(periodCount() / Math.max(1,(activeLeague?.managerCount || 2)-1))*5); }
+  function options() { return {model:'paid',version:2,competition:plan,startGw}; }
+  function choices() { return (activeLeague?.managers || []).map(m => ({managerId:Number(m.managerId),moneyEligible:true,startMode:'zero',startGw})); }
+  function show(value, scroll = true) {
     stage = value;
-    el('playing-panel').hidden = value !== 2;
+    document.querySelector('#setup-view .hero').hidden = value > 1;
+    el('find-panel').hidden = value !== 1;
+    el('fee-panel').hidden = value !== 2;
     el('prize-panel').hidden = value !== 3;
     el('create-panel').hidden = value !== 4 || !activePrizeConfig;
+    summaries();
     if (value === 4) renderReview();
-    const target = value === 2 ? 'playing-panel' : value === 3 ? 'prize-panel' : 'create-panel';
-    if (scroll) el(target).scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (scroll) el(value === 1 ? 'find-panel' : value === 2 ? 'fee-panel' : value === 3 ? 'prize-panel' : 'create-panel').scrollIntoView({behavior:'smooth',block:'start'});
+  }
+  function summaries() {
+    const items = [];
+    if (stage > 1 && activeLeague) items.push([1,'League',activeLeague.league.name + ' · ' + activeLeague.managerCount + ' entrants']);
+    if (stage > 2) items.push([2,'Entry',money(fee()) + ' each · ' + money(fee()*activeLeague.managerCount) + ' pool']);
+    if (stage > 3) items.push([3,'Prizes',plan === 'both' ? 'Manager of the Month + overall' : 'Overall winner']);
+    el('setup-summaries').innerHTML = items.map(([step,title,value]) =>
+      '<div class="setup-completed"><div><strong>'+title+'</strong><span>'+escapeHtml(value)+'</span></div><button type="button" class="text-button" data-change="'+step+'">Change '+title.toLowerCase()+'</button></div>').join('');
+    el('setup-summaries').querySelectorAll('[data-change]').forEach(button => button.addEventListener('click',() => {
+      el('lock-confirm').checked = false; show(Number(button.dataset.change));
+    }));
   }
   function sync() {
-    document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)));
-    document.querySelectorAll('[data-template]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.template === template)));
-    el('playing-tip').textContent = mode === 'fun' ? 'No entry fee and no cash prizes. Follow the standings, enjoy the rivalries and add an optional forfeit.' :
-      mode === 'both' ? 'Tick the managers playing for money below. Everyone else joins for fun and can never take a cash prize.' : 'Every manager contributes to the pool. Choose Both if some managers are joining for fun.';
-    el('manager-choices').open = mode === 'both';
-    el('playing-next').textContent = mode === 'fun' ? 'Review your tracker' : 'Continue to prizes';
-    const competition = el('competition-choice').value;
-    el('competition-tip').textContent = tips[competition] + (['monthly','both'].includes(competition) ? ' Baruc uses nine four-gameweek periods and a final two-gameweek sprint, rather than calendar months.' : '');
-    el('custom-prizes').hidden = template !== 'custom';
-    el('overall-controls').hidden = ['monthly','winner'].includes(competition);
-    el('monthly-controls').hidden = ['overall','winner'].includes(competition);
-    el('allocation-control').hidden = competition !== 'both';
-    el('monthly-percent-label').textContent = el('monthly-percent').value + '%';
-    document.querySelectorAll('#participant-setup [data-field="moneyEligible"]').forEach(input => {
-      input.disabled = mode !== 'both';
-      if (mode !== 'both') input.checked = mode === 'money';
-    });
-    document.querySelectorAll('[data-fee]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.fee === el('entry-fee').value)));
+    const n = activeLeague?.managerCount || 0, total = fee()*n, count = periodCount();
+    document.querySelectorAll('[data-fee]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.fee === el('entry-fee').value)));
+    document.querySelectorAll('[data-plan]').forEach(b => b.setAttribute('aria-pressed',String(b.dataset.plan === plan)));
+    el('pool-summary').textContent = validFee() ? n+' entrants × '+money(fee())+' = '+money(total)+' prize pool' : 'Choose £5 or more, in £5 increments.';
+    el('fee-next').disabled = !validFee() || !supported;
+    el('start-summary').textContent = supported ? 'Everyone starts from zero in GW'+startGw+'. Earlier FPL points do not count.' : 'The simplified setup needs the planned backend update before creating a tracker.';
+    el('overall-card').textContent = validFee() ? money(total)+' to the overall winner' : '';
+    const monthly = Math.floor((total-fee())/count/5)*5;
+    el('monthly-card').textContent = validFee() && fee() >= minimumFee() ? money(monthly)+' per period + '+money(total-monthly*count)+' overall' : 'Available from '+money(minimumFee())+' per entrant';
+    el('unlock-monthly').hidden = fee() >= minimumFee();
+    el('unlock-monthly').textContent = 'Use '+money(minimumFee())+' each and add monthly prizes';
+    el('prizes-next').disabled = !activePrizeConfig || prizeCalculationPending;
   }
-  function options() {
-    const competition = el('competition-choice').value;
-    const rules = { playMode: mode, template, competition,
-      monthlyPercent: Number(el('monthly-percent').value),
-      forfeits: { overall: el('forfeit-overall').value.trim(), monthly: el('forfeit-monthly').value.trim() } };
-    if (template === 'custom' && mode !== 'fun') {
-      function ratio(kind) {
-        const places = Number(el(kind + '-places').value);
-        const value = el(kind + '-ratio').value.split(':').map(v => Number(v.trim()));
-        if (!Number.isInteger(places) || places < 1 || value.length !== places || value.some(v => !Number.isInteger(v) || v < 1)) {
-          throw new Error('Enter one positive whole-number ratio for each ' + kind + ' winning place.');
-        }
-        return value;
-      }
-      if (!['monthly','winner'].includes(competition)) rules.overallRatio = ratio('overall');
-      if (!['overall','winner'].includes(competition)) rules.periodRatio = ratio('monthly');
-    }
-    return rules;
-  }
-  function fee() { return mode === 'fun' ? 0 : Number(el('entry-fee').value); }
-  function onLeague(data) {
-    supported = data.setupRulesVersion === 1;
-    sync(); showStage(2, false);
-    if (!supported) {
-      el('playing-tip').textContent = 'The new setup is awaiting the planned backend update. You can browse the options, but creation is unavailable until that update is deployed.';
-    }
+  function changed() {
+    el('lock-confirm').checked = false;
+    ParticipantUI.invalidatePreview();
+    sync();
   }
   function decoratePreview(config) {
-    const notes = (config.recommendations || []).map(n => `<p class="setup-warning">${escapeHtml(n)}</p>`).join('');
-    const overall = config.overall.payouts || [];
-    const monthly = config.recurring.payoutsPerPeriod || [];
-    const chart = (values) => values.length ? '<div class="ratio-bars" aria-hidden="true">' + values.map(v => `<span style="flex:${Number(v)}"></span>`).join('') + '</div>' : '';
-    el('prize-result').insertAdjacentHTML('beforeend', chart(overall) + notes);
-    if (template === 'default') {
-      el('overall-places').value = Math.max(1, overall.length);
-      el('monthly-places').value = Math.max(1, monthly.length);
-      el('overall-ratio').value = (config.overall.ratio || [1]).join(':');
-      el('monthly-ratio').value = (config.recurring.ratio || [1]).join(':');
-      if (config.totalPool > 0 && config.recurring.totalPot > 0 && config.overall.pot > 0) {
-        el('monthly-percent').value = Math.max(1, Math.min(99, Math.round(config.recurring.totalPot / config.totalPool * 100)));
-      }
-    }
+    startGw = config.setupRules.startGw;
+    sync();
+    const first = config.recurring.periods[0];
+    el('prize-result').innerHTML =
+      '<div class="setup-tip"><strong>Overall winner: '+money(config.overall.pot)+'</strong>'+
+      (plan === 'both' ? '<p>'+config.recurring.periodCount+' awards of '+money(config.recurring.potPerPeriod)+' · one winner per period</p>' : '<p>The entire pool goes to the overall winner.</p>')+
+      '<p>Everyone starts at zero in GW'+startGw+'.'+(plan === 'both' && first ? ' First award: '+escapeHtml(first.label)+'.' : '')+'</p></div>'+
+      '<p class="section-copy">Prizes are allocated in £5 increments. Tied winners share the prize equally, which can produce smaller amounts and pennies.</p>';
   }
   function reviewDetails() {
-    const rules = activePrizeConfig.setupRules || options();
-    const names = (ParticipantUI.choices() || []).filter(m => m.moneyEligible).map(c => {
-      const manager = activeLeague.managers.find(m => Number(m.managerId) === c.managerId);
-      return manager ? manager.managerName + ' (' + manager.teamName + ')' : c.managerId;
-    });
-    return `<div class="setup-review-detail"><p><strong>${mode === 'fun' ? 'Playing for fun' : mode === 'both' ? 'Money + fun' : 'Playing for money'}</strong></p>
-      ${names.length ? `<p>Cash entrants: ${escapeHtml(names.join(', '))}</p>` : '<p>Everyone plays for fun. No cash is collected or awarded.</p>'}
-      <p>Overall prizes: ${activePrizeConfig.overall.payouts.map(money).join(' / ') || 'None'}<br>Monthly prizes per period: ${activePrizeConfig.recurring.payoutsPerPeriod.map(money).join(' / ') || 'None'}</p>
-      <p>Overall last-place forfeit: ${escapeHtml(rules.forfeits.overall || 'None')}<br>Monthly last-place forfeit: ${escapeHtml(rules.forfeits.monthly || 'None')}</p>
-      <p>Scoring: ${(ParticipantUI.choices() || []).filter(m => m.startMode === 'zero').map(m => {
-        const manager = activeLeague.managers.find(v => Number(v.managerId) === m.managerId);
-        return escapeHtml(manager?.teamName || m.managerId) + ' starts from zero in GW' + m.startGw;
-      }).join('; ') || 'Available season history for everyone'}.</p>
-      <p>Keep your private organiser code after creation. It allows new admissions; it does not unlock these prize rules.</p></div>`;
+    return '<div class="setup-review-detail"><p><strong>'+ (plan === 'both' ? 'Manager of the Month + overall' : 'Overall winner') +'</strong></p>'+
+      '<p>Overall winner: '+money(activePrizeConfig.overall.pot)+'</p>'+
+      (plan === 'both' ? '<p>'+activePrizeConfig.recurring.periodCount+' period awards of '+money(activePrizeConfig.recurring.potPerPeriod)+'. First award: '+escapeHtml(activePrizeConfig.recurring.periods[0].label)+'.</p>' : '')+
+      '<p>All '+activeLeague.managerCount+' entrants start at zero in GW'+startGw+'. No earlier points are included.</p>'+
+      '<p>After creation, save your private organiser code. Share only the viewer link.</p></div>';
   }
-  function renderTracker(data) {
-    document.getElementById('forfeit-banner')?.remove();
-    const forfeits = data.prizes?.setupRules?.forfeits;
-    if (!forfeits || (!forfeits.overall && !forfeits.monthly)) return;
-    const banner = document.createElement('aside'); banner.id = 'forfeit-banner'; banner.className = 'forfeit-banner';
-    const parts = [];
-    if (forfeits.overall) parts.push('Overall last place: ' + forfeits.overall);
-    if (forfeits.monthly) parts.push('Each period’s last place: ' + forfeits.monthly);
-    banner.textContent = parts.join(' • ');
-    document.querySelector('.tracker-hero').appendChild(banner);
-  }
-  document.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.mode; sync(); changed(); }));
-  document.querySelectorAll('[data-template]').forEach(b => b.addEventListener('click', () => { template = b.dataset.template; sync(); changed(); }));
-  document.querySelectorAll('[data-fee]').forEach(b => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-fee]').forEach(b => b.addEventListener('click',() => {
     if (b.dataset.fee === 'custom') { el('entry-fee').focus(); el('entry-fee').select(); return; }
-    el('entry-fee').value = b.dataset.fee; sync(); changed();
+    el('entry-fee').value = b.dataset.fee; changed();
   }));
-  ['competition-choice','monthly-percent','overall-ratio','monthly-ratio','forfeit-overall','forfeit-monthly'].forEach(id => el(id).addEventListener('input', () => { sync(); changed(); }));
-  ['overall','monthly'].forEach(kind => el(kind + '-places').addEventListener('input', () => {
-    const n = Number(el(kind + '-places').value);
-    if (Number.isInteger(n) && n > 0 && n <= 50) el(kind + '-ratio').value = (n === 2 ? [3,1] : n === 3 ? [5,3,1] : Array.from({length:n}, (_,i) => n-i)).join(':');
-    changed();
-  }));
-  el('playing-next').addEventListener('click', async () => {
-    if (mode === 'fun') { await calculatePrizes(); if (activePrizeConfig) showStage(4); }
-    else showStage(3);
-  });
-  el('prizes-next').addEventListener('click', () => { if (activePrizeConfig && !prizeCalculationPending) showStage(4); });
-  el('prizes-back').addEventListener('click', () => showStage(2));
-  el('review-back').addEventListener('click', () => { el('lock-confirm').checked = false; showStage(mode === 'fun' ? 2 : 3); });
-  el('entry-fee').addEventListener('input', sync);
-  return { options, fee, mode: () => mode, stage: () => stage, supported: () => supported,
-    onLeague, decoratePreview, reviewDetails, renderTracker,
-    reset() { mode = 'money'; template = 'default'; stage = 1; supported = false;
-      document.querySelectorAll('#setup-view button, #setup-view input, #setup-view select').forEach(e => { e.disabled = false; });
-      el('playing-panel').hidden = true; el('prize-panel').hidden = true; el('create-panel').hidden = true;
-      el('forfeit-overall').value = ''; el('forfeit-monthly').value = ''; el('competition-choice').value = 'both'; el('lock-confirm').checked = false; sync(); },
-    setBusy(value) { document.querySelectorAll('#setup-view button, #setup-view input, #setup-view select').forEach(e => { e.disabled = value; }); if (!value) sync(); }
+  document.querySelectorAll('[data-plan]').forEach(b => b.addEventListener('click',() => {plan=b.dataset.plan; changed();}));
+  el('unlock-monthly').addEventListener('click',() => {el('entry-fee').value=minimumFee();plan='both';changed();summaries();});
+  el('entry-fee').addEventListener('input',() => {el('lock-confirm').checked=false;sync();});
+  el('fee-next').addEventListener('click',() => {if(validFee() && supported) show(3);});
+  el('prizes-next').addEventListener('click',() => {if(activePrizeConfig && !prizeCalculationPending) show(4);});
+  el('review-back').addEventListener('click',() => {el('lock-confirm').checked=false;show(3);});
+  return {options,fee,choices,mode:()=> 'money',stage:()=>stage,supported:()=>supported,
+    onLeague(data) {supported=data.setupRulesVersion===2;startGw=Number(data.paidStartGw || 1);plan='overall';sync();show(2);},
+    decoratePreview,reviewDetails,
+    renderTracker(data) {document.getElementById('forfeit-banner')?.remove();},
+    reset() {stage=1;plan='overall';startGw=1;supported=false;el('lock-confirm').checked=false;
+      document.querySelector('#setup-view .hero').hidden=false;
+      document.querySelectorAll('#setup-view button,#setup-view input').forEach(e=>{e.disabled=false;});
+      el('setup-summaries').innerHTML='';el('find-panel').hidden=false;el('fee-panel').hidden=true;el('prize-panel').hidden=true;el('create-panel').hidden=true;},
+    setBusy(value) {document.querySelectorAll('#setup-view button,#setup-view input').forEach(e=>{e.disabled=value;});if(!value)sync();}
   };
 })();

@@ -41,7 +41,7 @@
         </p>
       </section>
 
-      <section class="panel">
+      <section id="find-panel" class="panel">
         <div class="step-heading">
           <span class="step-number">1</span>
           <div>
@@ -73,73 +73,30 @@
         <div id="league-result" hidden></div>
       </section>
 
-      <section id="playing-panel" class="panel" hidden>
-        <div class="step-heading"><span class="step-number">2</span><div><h2>What are you playing for?</h2><p>Everyone takes part in the standings.</p></div></div>
-        <div class="choice-grid" role="group" aria-label="Playing mode">
-          <button type="button" data-mode="money" aria-pressed="true"><strong>Money</strong><span>Everyone chips in</span></button>
-          <button type="button" data-mode="fun" aria-pressed="false"><strong>For fun</strong><span>All the bragging rights</span></button>
-          <button type="button" data-mode="both" aria-pressed="false"><strong>Both</strong><span>Choose who plays for cash</span></button>
-        </div>
-        <p id="playing-tip" class="setup-tip"></p>
-        <details id="manager-choices"><summary>Choose money entrants &amp; scoring history</summary><div id="setup-managers"></div></details>
-        <details id="forfeit-options"><summary>Add a last-place forfeit (optional)</summary>
-          <p class="section-copy">A bit of fun for everyone in the standings. Agree it with your league first. It appears as a banner on your tracker.</p>
-          <label class="field-label" for="forfeit-overall">Overall last place</label><input id="forfeit-overall" maxlength="200" placeholder="e.g. Buy breakfast at the end-of-season meet-up">
-          <label class="field-label" for="forfeit-monthly">Monthly last place</label><input id="forfeit-monthly" maxlength="200" placeholder="e.g. Let the league choose your team name">
-          <p class="section-copy">Monthly means each Baruc four-gameweek period, plus the final two-gameweek sprint.</p>
-        </details>
-        <button id="playing-next" class="primary-wide" type="button">Continue to prizes</button>
-      </section>
-
-      <section id="prize-panel" class="panel" hidden>
-        <div class="step-heading">
-          <span class="step-number">3</span>
-          <div>
-            <h2>Make the prizes yours</h2>
-            <p>
-              Start with a suggested plan, then customise any split.
-            </p>
-          </div>
-        </div>
-
-        <div id="money-options">
-        <label class="field-label" for="entry-fee">Entry fee per money entrant</label>
+      <nav id="setup-summaries" aria-label="Completed setup steps"></nav>
+      <section id="fee-panel" class="panel" hidden>
+        <div class="step-heading"><span class="step-number">2</span><div><h2>What’s the entry fee?</h2><p>Everyone in the league plays for money. Minimum £5 each.</p></div></div>
+        <label class="field-label" for="entry-fee">Entry fee per entrant</label>
         <div id="fee-buttons" class="fee-buttons" role="group" aria-label="Entry fee">
           <button type="button" data-fee="5">£5</button><button type="button" data-fee="10">£10</button>
           <button type="button" data-fee="25">£25</button><button type="button" data-fee="50">£50</button>
-          <button type="button" data-fee="75" aria-pressed="true">£75 <small>Baruc default</small></button><button type="button" data-fee="custom">Custom</button>
+          <button type="button" data-fee="75">£75 <small>Baruc preset</small></button><button type="button" data-fee="custom">Custom</button>
         </div>
-
-        <div class="currency-field">
-          <span>£</span>
-          <input
-            id="entry-fee"
-            type="number"
-            min="0"
-            step="0.01"
-            value="75"
-          >
-        </div>
-        <label class="field-label" for="competition-choice">What should the prize pool reward?</label>
-        <select id="competition-choice"><option value="both">Manager of the month + manager of the year</option><option value="monthly">Manager of the month only</option><option value="overall">Manager of the year — overall places</option><option value="winner">Winner takes all</option></select>
-        <p id="competition-tip" class="setup-tip"></p>
+        <div class="currency-field"><span>£</span><input id="entry-fee" type="number" min="5" max="10000" step="5" value="5"></div>
+        <p id="pool-summary" class="setup-tip" aria-live="polite"></p>
+        <p id="start-summary" class="section-copy"></p>
+        <button id="fee-next" class="primary-wide" type="button">Choose prizes</button>
+      </section>
+      <section id="prize-panel" class="panel" hidden>
+        <div class="step-heading"><span class="step-number">3</span><div><h2>Give them something to play for</h2><p>One overall winner, or a fresh chance throughout the season.</p></div></div>
         <div class="choice-grid two" role="group" aria-label="Prize plan">
-          <button type="button" data-template="default" aria-pressed="true"><strong>Suggested</strong><span>Adapted to your fee and cash entrants</span></button>
-          <button type="button" data-template="custom" aria-pressed="false"><strong>Custom</strong><span>Choose places and ratios</span></button>
+          <button type="button" data-plan="overall" aria-pressed="true"><strong>Overall winner</strong><span>Simple. One champion takes the pool.</span><span id="overall-card"></span></button>
+          <button type="button" data-plan="both" aria-pressed="false"><strong>Manager of the Month + overall</strong><span>Keep everyone involved with a fresh chance every four gameweeks.</span><span id="monthly-card"></span></button>
         </div>
-        <div id="custom-prizes" hidden>
-          <div id="overall-controls"><label for="overall-places">Overall paid places</label><input id="overall-places" type="number" min="1" max="50" value="2">
-          <label for="overall-ratio">Overall ratio</label><input id="overall-ratio" value="3:1" inputmode="text"></div>
-          <div id="monthly-controls"><label for="monthly-places">Monthly paid places</label><input id="monthly-places" type="number" min="1" max="50" value="2">
-          <label for="monthly-ratio">Monthly ratio</label><input id="monthly-ratio" value="3:1" inputmode="text"></div>
-          <p class="section-copy">One weight per place. For example, 5:3:1 gives first place five shares, second three and third one. Ties split the occupied prizes.</p>
-          <div id="allocation-control"><label for="monthly-percent">Percentage of the pool for monthly prizes: <output id="monthly-percent-label">60%</output></label>
-          <input id="monthly-percent" type="range" min="1" max="99" value="60"></div>
-        </div></div>
-
-        <div id="prize-status" class="status" hidden></div>
-        <div id="prize-result"></div>
-        <div class="setup-actions"><button id="prizes-back" class="text-button" type="button">Back to playing options</button><button id="prizes-next" type="button">Review your tracker</button></div>
+        <p class="section-copy">Manager of the Month runs in four-gameweek periods, with a two-gameweek Final Sprint. The overall winner receives at least their entry fee back.</p>
+        <button id="unlock-monthly" type="button" hidden></button>
+        <div id="prize-status" class="status" hidden></div><div id="prize-result"></div>
+        <button id="prizes-next" class="primary-wide" type="button">Review your tracker</button>
       </section>
 
       <section id="create-panel" class="panel" hidden>
@@ -147,13 +104,13 @@
           <span class="step-number">4</span>
           <div>
             <h2>One last look</h2>
-            <p>You can go back and change anything before creating. Creation locks the entry fee, prize plan and forfeits. Your shared link is view-only.</p>
+            <p>You can go back and change anything before creating. Creation locks the entry fee, prize plan and starting gameweek. Your shared link is view-only.</p>
           </div>
         </div>
 
         <div id="review"></div>
         <button id="review-back" class="text-button" type="button">Back and make changes</button>
-        <label class="lock-confirm"><input id="lock-confirm" type="checkbox">I've checked the entrants, prizes and forfeits. Lock these settings.</label>
+        <label class="lock-confirm"><input id="lock-confirm" type="checkbox">I've checked the entry fee, prizes and start gameweek. Lock these settings.</label>
 
         <button id="create-button" class="primary-wide" type="button">
           Create and lock tracker
