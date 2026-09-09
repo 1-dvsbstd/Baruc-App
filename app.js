@@ -191,6 +191,9 @@ function resetSetupForNewTracker() {
 
   window.history.pushState({}, '', url);
 
+  clearTimeout(prizeTimer);
+  prizeTimer = null;
+
   leagueForm.reset();
   entryFeeInput.value = '75';
 
@@ -201,6 +204,10 @@ function resetSetupForNewTracker() {
   prizeResult.innerHTML = '';
 
   createPanel.hidden = true;
+  review.innerHTML = '';
+
+  createButton.disabled = false;
+  createButton.textContent = 'Create tracker';
 
   clearStatus(leagueStatus);
   clearStatus(prizeStatus);
@@ -418,6 +425,26 @@ function gameweekStatusLabel(gameweek) {
   return 'Current';
 }
 
+function gameweekScoreStatusLabel(gameweek) {
+  if (!gameweek) {
+    return 'Unknown';
+  }
+
+  if (gameweek.isLive) {
+    return 'Live';
+  }
+
+  if (gameweek.status === 'finished') {
+    return 'Complete';
+  }
+
+  if (gameweek.status === 'upcoming') {
+    return 'Upcoming';
+  }
+
+  return 'Current';
+}
+
 function renderPeriodStandings(data) {
   const period = data.currentPeriod;
 
@@ -501,7 +528,7 @@ function renderCurrentGameweek(data) {
       ? `GW${gwNumber} scores`
       : 'Latest scores';
 
-  let meta = gameweekStatusLabel(gameweek);
+  let meta = gameweekScoreStatusLabel(gameweek);
 
   if (gameweek.showUpcoming && gameweek.next && gameweek.nextDeadline) {
     meta +=
