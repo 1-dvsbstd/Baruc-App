@@ -1,7 +1,7 @@
 /* Paid setup: one open step, immutable reviewed rules, no writes until create. */
 window.SetupUI = (() => {
   const el = id => document.getElementById(id);
-  let stage = 1, plan = 'overall', startGw = 1, supported = false;
+  let stage = 1, plan = 'overall', startGw = 1, supported = false, planTouched = false;
   function fee() { return Number(el('entry-fee').value); }
   function validFee() { return Number.isInteger(fee()) && fee() >= 5 && fee() <= 10000 && fee() % 5 === 0; }
   function periodCount() { return startGw <= 36 ? 10 - Math.floor((startGw - 1) / 4) : 1; }
@@ -37,17 +37,28 @@ window.SetupUI = (() => {
     el('pool-summary').textContent = validFee() ? n+' entrants × '+money(fee())+' = '+money(total)+' prize pool' : 'Choose £5 or more, in £5 increments.';
     el('fee-next').disabled = !validFee() || !supported;
     el('start-summary').textContent = supported ? 'Everyone starts from zero in GW'+startGw+'. Earlier FPL points do not count.' : 'The simplified setup needs the planned backend update before creating a tracker.';
-    el('overall-card').textContent = validFee() ? money(total)+' to the overall winner' : '';
+    el('overall-card').textContent = validFee() ? money(total)+' to one season-long winner' : '';
     const monthly = Math.floor((total-fee())/count/5)*5;
-    el('monthly-card').textContent = validFee() && fee() >= minimumFee() ? money(monthly)+' per period + '+money(total-monthly*count)+' overall' : 'Available from '+money(minimumFee())+' per entrant';
+    el('monthly-card').textContent = validFee() && fee() >= minimumFee()
+      ? 'Recommended · '+money(monthly)+' per period + '+money(total-monthly*count)+' overall'
+      : 'Recommended · available from '+money(minimumFee())+' per entrant';
     el('unlock-monthly').hidden = fee() >= minimumFee();
-    el('unlock-monthly').textContent = 'Use '+money(minimumFee())+' each and add monthly prizes';
+    el('unlock-monthly').textContent = 'Use '+money(minimumFee())+' each and choose Manager of the Month';
     el('prizes-next').disabled = !activePrizeConfig || prizeCalculationPending;
   }
   function changed() {
     el('lock-confirm').checked = false;
     ParticipantUI.invalidatePreview();
     sync();
+  }
+  function choosePlan(nextPlan) {
+    if (nextPlan === 'both' && fee() < minimumFee()) {
+      el('entry-fee').value = minimumFee();
+    }
+    plan = nextPlan;
+    planTouched = true;
+    changed();
+    summaries();
   }
   function decoratePreview(config) {
     startGw = config.setupRules.startGw;
@@ -70,17 +81,35 @@ window.SetupUI = (() => {
     if (b.dataset.fee === 'custom') { el('entry-fee').focus(); el('entry-fee').select(); return; }
     el('entry-fee').value = b.dataset.fee; changed();
   }));
-  document.querySelectorAll('[data-plan]').forEach(b => b.addEventListener('click',() => {plan=b.dataset.plan; changed();}));
-  el('unlock-monthly').addEventListener('click',() => {el('entry-fee').value=minimumFee();plan='both';changed();summaries();});
+  document.querySelectorAll('[data-plan]').forEach(b => b.addEventListener('click',() => choosePlan(b.dataset.plan)));
+  el('unlock-monthly').addEventListener('click',() => choosePlan('both'));
   el('entry-fee').addEventListener('input',() => {el('lock-confirm').checked=false;sync();});
-  el('fee-next').addEventListener('click',() => {if(validFee() && supported) show(3);});
+  el('fee-next').addEventListener('click',() => {
+    if (!validFee() || !supported) return;
+    if (!planTouched) {
+      const preferredPlan = fee() >= minimumFee() ? 'both' : 'overall';
+      if (plan !== preferredPlan) {
+        plan = preferredPlan;
+        ParticipantUI.invalidatePreview();
+      }
+    }
+    sync();
+    show(3);
+  });
   el('prizes-next').addEventListener('click',() => {if(activePrizeConfig && !prizeCalculationPending) show(4);});
   el('review-back').addEventListener('click',() => {el('lock-confirm').checked=false;show(3);});
   return {options,fee,choices,mode:()=> 'money',stage:()=>stage,supported:()=>supported,
-    onLeague(data) {supported=data.setupRulesVersion===2;startGw=Number(data.paidStartGw || 1);plan='overall';sync();show(2);},
+    onLeague(data) {
+      supported=data.setupRulesVersion===2;
+      startGw=Number(data.paidStartGw || 1);
+      planTouched=false;
+      plan=validFee() && fee() >= minimumFee() ? 'both' : 'overall';
+      sync();
+      show(2);
+    },
     decoratePreview,reviewDetails,
     renderTracker(data) {document.getElementById('forfeit-banner')?.remove();},
-    reset() {stage=1;plan='overall';startGw=1;supported=false;el('lock-confirm').checked=false;
+    reset() {stage=1;plan='overall';startGw=1;supported=false;planTouched=false;el('lock-confirm').checked=false;
       document.querySelector('#setup-view .hero').hidden=false;
       document.querySelectorAll('#setup-view button,#setup-view input').forEach(e=>{e.disabled=false;});
       el('setup-summaries').innerHTML='';el('find-panel').hidden=false;el('fee-panel').hidden=true;el('prize-panel').hidden=true;el('create-panel').hidden=true;},
