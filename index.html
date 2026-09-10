@@ -35,9 +35,10 @@
     <section id="setup-view">
       <section class="hero">
         <span class="eyebrow">CREATE YOUR TRACKER</span>
-        <h1>Your league. Your rules.</h1>
+        <h1>Add a monthly pot to your FPL mini-league.</h1>
         <p>
-          A little competition. A season of bragging rights. Start by finding your FPL league.
+          Baruc tracks the side competition FPL does not: Manager of the Month pots,
+          an overall prize and who has won what. Set it up in minutes.
         </p>
       </section>
 
@@ -75,7 +76,7 @@
 
       <nav id="setup-summaries" aria-label="Completed setup steps"></nav>
       <section id="fee-panel" class="panel" hidden>
-        <div class="step-heading"><span class="step-number">2</span><div><h2>What’s the entry fee?</h2><p>Everyone in the league plays for money. Minimum £5 each.</p></div></div>
+        <div class="step-heading"><span class="step-number">2</span><div><h2>What’s the entry fee?</h2><p>£5 minimum, in £5 increments. Baruc shows the full pool instantly.</p></div></div>
         <label class="field-label" for="entry-fee">Entry fee per entrant</label>
         <div id="fee-buttons" class="fee-buttons" role="group" aria-label="Entry fee">
           <button type="button" data-fee="5">£5</button><button type="button" data-fee="10">£10</button>
@@ -88,12 +89,21 @@
         <button id="fee-next" class="primary-wide" type="button">Choose prizes</button>
       </section>
       <section id="prize-panel" class="panel" hidden>
-        <div class="step-heading"><span class="step-number">3</span><div><h2>Give them something to play for</h2><p>One overall winner, or a fresh chance throughout the season.</p></div></div>
+        <div class="step-heading"><span class="step-number">3</span><div><h2>Choose how to split the pot</h2><p>Manager of the Month is what Baruc is built for. Overall-only stays available if you want it simple.</p></div></div>
         <div class="choice-grid two" role="group" aria-label="Prize plan">
-          <button type="button" data-plan="overall" aria-pressed="true"><strong>Overall winner</strong><span>Simple. One champion takes the pool.</span><span id="overall-card"></span></button>
-          <button type="button" data-plan="both" aria-pressed="false"><strong>Manager of the Month + overall</strong><span>Keep everyone involved with a fresh chance every four gameweeks.</span><span id="monthly-card"></span></button>
+          <button type="button" data-plan="both" aria-pressed="false">
+            <small class="choice-badge">Recommended</small>
+            <strong>Manager of the Month + overall</strong>
+            <span>A fresh contest every four gameweeks, tracked automatically by Baruc.</span>
+            <span id="monthly-card"></span>
+          </button>
+          <button type="button" data-plan="overall" aria-pressed="true">
+            <strong>Overall winner</strong>
+            <span>One season-long winner takes the full pool.</span>
+            <span id="overall-card"></span>
+          </button>
         </div>
-        <p class="section-copy">Manager of the Month runs in four-gameweek periods, with a two-gameweek Final Sprint. The overall winner receives at least their entry fee back.</p>
+        <p class="section-copy">FPL already handles the overall table well. Baruc’s recurring option keeps the extra pots, period winners and winnings history in one place. Periods run in four-gameweek blocks, followed by the GW37–38 Final Sprint.</p>
         <button id="unlock-monthly" type="button" hidden></button>
         <div id="prize-status" class="status" hidden></div><div id="prize-result"></div>
         <button id="prizes-next" class="primary-wide" type="button">Review your tracker</button>
