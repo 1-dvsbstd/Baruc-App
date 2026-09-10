@@ -9,8 +9,9 @@ summary { cursor: pointer; padding: 12px 0; }
 .league-guide li { margin: 10px 0; line-height: 1.6; }
 .choice-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 18px 0; }
 .choice-grid.two { grid-template-columns: repeat(2, 1fr); }
-.choice-grid button { text-align: left; background: #151e29; border: 1px solid #344252; color: #eef4fa; min-height: 94px; padding: 16px; }
+.choice-grid button { position:relative; text-align: left; background: #151e29; border: 1px solid #344252; color: #eef4fa; min-height: 94px; padding: 16px; }
 .choice-grid button span { display: block; font-size: 13px; color: #adb8c7; margin-top: 7px; font-weight: 400; line-height: 1.5; }
+.choice-badge { display:inline-block; margin-bottom:10px; padding:4px 7px; border-radius:999px; background:#17382d; color:#82e6bd; font-size:10px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
 button[aria-pressed="true"] { border-color: #82e6bd; box-shadow: inset 0 0 0 1px #82e6bd; background: #17382d; color: #e4fff2; }
 .fee-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .fee-buttons button { background: #151e29; color: #eef4fa; border: 1px solid #344252; }
