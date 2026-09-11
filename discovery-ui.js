@@ -38,7 +38,7 @@
           </button>
           <button id="home-open-tracker" type="button">
             <strong>Open/manage existing tracker</strong>
-            <span>Find Baruc trackers already linked to your FPL mini-league.</span>
+            <span>Find the Baruc tracker already linked to your FPL mini-league.</span>
           </button>
         </div>
       `;
@@ -72,7 +72,7 @@
     if (mode === 'open') {
       if (heading) heading.textContent = 'Find your existing tracker';
       if (copy) copy.textContent = 'Enter the numeric ID from your FPL classic mini-league.';
-      if (button) button.textContent = 'Find trackers';
+      if (button) button.textContent = 'Find tracker';
     } else {
       if (heading) heading.textContent = 'Find your league';
       if (copy) copy.textContent = 'Enter the numeric ID from your FPL classic mini-league.';
@@ -172,13 +172,16 @@
       `;
     }).join('');
 
+    const legacyNote = trackers.length > 1
+      ? '<p class="section-copy">This test league contains several older trackers created before Baruc switched to one tracker per FPL league. New duplicates are now blocked.</p>'
+      : '<p class="section-copy">This FPL league already has a Baruc tracker. Open it or manage participants with the private organiser code.</p>';
+
     resultsPanel.innerHTML = `
       <div class="section-heading"><div>
         <h2>${trackers.length === 1 ? 'Existing tracker found' : 'Existing trackers found'}</h2>
-        <p class="section-copy">Open the tracker, or manage participants with the private organiser code.</p>
+        ${legacyNote}
       </div></div>
       <div class="existing-trackers-list">${cards}</div>
-      ${mode === 'create' ? '<button id="discovery-create-another" class="text-button" type="button">Create another tracker for this league</button>' : ''}
     `;
 
     resultsPanel.querySelectorAll('[data-league-key]').forEach(card => {
@@ -186,16 +189,11 @@
       card.querySelector('[data-view]').addEventListener('click', () => openTracker(key, false));
       card.querySelector('[data-manage]').addEventListener('click', () => openTracker(key, true));
     });
-
-    resultsPanel.querySelector('#discovery-create-another')?.addEventListener('click', () => {
-      mode = 'create';
-      continueCreateSetup();
-    });
   }
 
   async function discover(leagueId) {
     resultsPanel.hidden = false;
-    resultsPanel.innerHTML = '<p class="discovery-status">Looking for existing Baruc trackers…</p>';
+    resultsPanel.innerHTML = '<p class="discovery-status">Looking for an existing Baruc tracker…</p>';
 
     const data = await api({ action: 'findTrackers', leagueId });
     if (!data.ok) throw new Error(data.message || 'Could not look up Baruc trackers.');
