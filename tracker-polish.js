@@ -66,6 +66,21 @@
     });
   }
 
+  function tidyOrganiserPanel() {
+    const panel = document.getElementById('participant-admin');
+    if (!panel) return;
+
+    const summary = panel.querySelector('details > summary');
+    const intro = panel.querySelector('details > .section-copy');
+    const button = panel.querySelector('#organiser-open');
+
+    if (summary) summary.textContent = 'Manage tracker';
+    if (intro) {
+      intro.textContent = 'Enter your private organiser code to check for new league members. Prize settings stay locked after creation.';
+    }
+    if (button) button.textContent = 'Check for new participants';
+  }
+
   function applyTrackerPolish() {
     compactGameweekRanges(document.getElementById('tracker-subtitle'));
     compactGameweekRanges(document.getElementById('current-period-title'));
@@ -73,6 +88,7 @@
     compactGameweekRanges(document.getElementById('review'));
     tidyPrizeSummary();
     tidyPeriodCards();
+    tidyOrganiserPanel();
   }
 
   let scheduled = false;
