@@ -107,6 +107,14 @@
       : 'Overall winner';
   }
 
+  function prizeLabel(tracker) {
+    if (tracker.competition === 'both') {
+      return `${money(tracker.periodPot)} per period · ${money(tracker.overallPot)} overall`;
+    }
+
+    return `${money(tracker.overallPot || tracker.totalPool)} overall`;
+  }
+
   function openTracker(leagueKey, manage) {
     const url = new URL(trackerUrl(leagueKey));
     if (manage) url.searchParams.set('manage', '1');
@@ -153,7 +161,8 @@
           </div>
           <div class="existing-tracker-meta">
             ${escapeHtml(planLabel(tracker))} · ${escapeHtml(startText)} ·
-            ${escapeHtml(tracker.managerCount)} entrants · ${money(tracker.totalPool)} pool
+            ${escapeHtml(tracker.managerCount)} entrants · ${money(tracker.totalPool)} pool<br>
+            ${escapeHtml(prizeLabel(tracker))}
           </div>
           <div class="existing-tracker-actions">
             <button type="button" data-view>View tracker</button>
