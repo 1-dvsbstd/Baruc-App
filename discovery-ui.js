@@ -7,7 +7,8 @@
 
   if (!form || !findPanel || !hero || !summaries) return;
 
-  let enabled = false;
+  let enabled = null;
+  let supportCheck = null;
   let mode = 'create';
   let bypassDiscovery = false;
   let homePanel = null;
@@ -17,6 +18,22 @@
     const parts = String(version || '').split('.').map(Number);
     return (parts[0] || 0) > major ||
       ((parts[0] || 0) === major && (parts[1] || 0) >= minor);
+  }
+
+  async function discoverySupported() {
+    if (enabled !== null) return enabled;
+    if (!supportCheck) {
+      supportCheck = api({ action: 'health' })
+        .then(health => {
+          enabled = health.ok === true && versionAtLeast(health.version, 0, 11);
+          return enabled;
+        })
+        .catch(() => {
+          enabled = false;
+          return false;
+        });
+    }
+    return supportCheck;
   }
 
   function ensurePanels() {
@@ -111,7 +128,6 @@
     if (tracker.competition === 'both') {
       return `${money(tracker.periodPot)} per period · ${money(tracker.overallPot)} overall`;
     }
-
     return `${money(tracker.overallPot || tracker.totalPool)} overall`;
   }
 
@@ -121,8 +137,7 @@
     window.location.href = url.toString();
   }
 
-  function continueCreateSetup() {
-    resultsPanel.hidden = true;
+  function continueLegacySetup() {
     bypassDiscovery = true;
     form.requestSubmit();
     bypassDiscovery = false;
@@ -130,12 +145,11 @@
 
   function renderTrackers(data) {
     const trackers = Array.isArray(data.trackers) ? data.trackers : [];
-
     resultsPanel.hidden = false;
 
     if (!trackers.length) {
       if (mode === 'create') {
-        continueCreateSetup();
+        continueLegacySetup();
         return;
       }
 
@@ -146,7 +160,7 @@
       `;
       resultsPanel.querySelector('#discovery-create-new').addEventListener('click', () => {
         mode = 'create';
-        continueCreateSetup();
+        continueLegacySetup();
       });
       return;
     }
@@ -192,6 +206,7 @@
   }
 
   async function discover(leagueId) {
+    ensurePanels();
     resultsPanel.hidden = false;
     resultsPanel.innerHTML = '<p class="discovery-status">Looking for an existing Baruc tracker…</p>';
 
@@ -200,8 +215,8 @@
     renderTrackers(data);
   }
 
-  document.addEventListener('submit', async event => {
-    if (!enabled || bypassDiscovery || event.target !== form) return;
+  form.addEventListener('submit', async event => {
+    if (bypassDiscovery) return;
 
     event.preventDefault();
     event.stopImmediatePropagation();
@@ -216,18 +231,24 @@
     button.disabled = true;
 
     try {
+      const supported = await discoverySupported();
+      if (!supported) {
+        continueLegacySetup();
+        return;
+      }
+
       clearStatus(document.getElementById('league-status'));
       await discover(leagueId);
     } catch (error) {
       setStatus(document.getElementById('league-status'), error.message, 'error');
-      resultsPanel.hidden = true;
+      if (resultsPanel) resultsPanel.hidden = true;
     } finally {
       button.disabled = false;
     }
   }, true);
 
-  document.getElementById('new-tracker-button')?.addEventListener('click', () => {
-    if (enabled) queueMicrotask(showHome);
+  document.getElementById('new-tracker-button')?.addEventListener('click', async () => {
+    if (await discoverySupported()) queueMicrotask(showHome);
   });
 
   function focusManagePanel() {
@@ -252,15 +273,8 @@
   if (focusManagePanel()) manageObserver.disconnect();
 
   (async () => {
-    try {
-      const health = await api({ action: 'health' });
-      enabled = health.ok === true && versionAtLeast(health.version, 0, 11);
-      if (!enabled) return;
-
-      ensurePanels();
-      if (!getLeagueKeyFromUrl()) showHome();
-    } catch (_) {
-      // Leave the existing setup flow untouched if discovery is unavailable.
-    }
+    if (!(await discoverySupported())) return;
+    ensurePanels();
+    if (!getLeagueKeyFromUrl()) showHome();
   })();
 })();
