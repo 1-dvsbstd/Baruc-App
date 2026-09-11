@@ -1,0 +1,16 @@
+.home-mode-panel { margin-top: 16px; }
+.existing-trackers { margin-top: 16px; }
+.existing-trackers[hidden] { display: none !important; }
+.existing-trackers-list { display: grid; gap: 10px; margin-top: 14px; }
+.existing-tracker-card { border: 1px solid var(--border); border-radius: 13px; background: var(--panel-2); padding: 15px; }
+.existing-tracker-title { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.existing-tracker-title strong { font-size: 1rem; }
+.existing-tracker-meta { color: var(--muted); font-size: .82rem; line-height: 1.55; margin-top: 7px; }
+.existing-tracker-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 13px; }
+.existing-tracker-actions .text-button { background: transparent; color: var(--soft); }
+.existing-tracker-actions button { flex: 1 1 150px; }
+.discovery-status { margin-top: 12px; color: var(--muted); font-size: .84rem; line-height: 1.5; }
+@media (max-width: 560px) {
+  .existing-tracker-title { display: block; }
+  .existing-tracker-title span { display: block; margin-top: 5px; }
+}
