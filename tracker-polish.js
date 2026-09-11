@@ -84,6 +84,33 @@
     });
   }
 
+  function tidyEmptyStates() {
+    const meta = document.getElementById('current-period-meta');
+    const standings = document.getElementById('current-period-standings');
+
+    if (!meta || !standings) return;
+
+    const waitingForScores = meta.textContent.includes('No scores recorded yet');
+    if (!waitingForScores) return;
+
+    const existing = standings.querySelector('.empty-state');
+    const copy = 'This competition has not started scoring yet.';
+
+    if (
+      standings.children.length === 1 &&
+      existing &&
+      existing.textContent.trim() === copy
+    ) {
+      return;
+    }
+
+    standings.innerHTML = `
+      <div class="empty-state">
+        ${copy}
+      </div>
+    `;
+  }
+
   function tidyOrganiserPanel() {
     const panel = document.getElementById('participant-admin');
     if (!panel) return;
@@ -111,6 +138,7 @@
     compactGameweekRanges(document.getElementById('review'));
     tidyPrizeSummary();
     tidyPeriodCards();
+    tidyEmptyStates();
     tidyOrganiserPanel();
   }
 
